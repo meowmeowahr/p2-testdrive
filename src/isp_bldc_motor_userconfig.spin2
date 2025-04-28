@@ -116,18 +116,23 @@ CON { Hardware Description }
 '   (2) Please configure your settings below here
 ' -------------------------------------------------------------------------------------------------
 
+    MOTOR_TYPE = MOTR_6_5_INCH
 
-'          Add your seeting here!
-'
-'     Simple, copy closest set from below...
-'     then make final edits to match your hardware configuration.
+    LEFT_MOTOR_BASE = PINS_P16_P31
+    RIGHT_MOTOR_BASE = PINS_P0_P15
 
+    DRIVE_VOLTAGE = PWR_18p5V
+
+    WHEEL_DIA_IN_INCH = 6.5   ' 6.5 inches (floating point constant)
+
+    LEFT_BOARD_TYPE = BRD_REV_B
+    RIGHT_BOARD_TYPE = BRD_REV_B
 
 
 ' -------------------------------------------------------------------------------------------------
 ' AUTHORs  TEST configuration (single Motor)
 ' -------------------------------------------------------------------------------------------------
-'{
+{
 
     MOTOR_TYPE = MOTR_DOCO_4KRPM
 
@@ -138,7 +143,7 @@ CON { Hardware Description }
     WHEEL_DIA_IN_INCH = 0.0   ' no wheel attached (floating point constant)
 
     ONLY_BOARD_TYPE = BRD_AUTO_DET
-'}
+}
 
 ' =================================================================================================
 '   Example settings

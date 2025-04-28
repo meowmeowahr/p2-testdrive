@@ -1,0 +1,5835 @@
+con
+	_clkfreq = 270000000
+	_clkmode = 17046267
+' 
+'   CLK_FREQ = 270_000_000                                        ' system freq as a constant
+	CLK_FREQ = 270000000
+'   _clkfreq = CLK_FREQ                                           ' set system clock
+' 
+'   RX1      = 63  { I }                                          ' programming / debug
+	RX1 = 63
+'   TX1      = 62  { O }
+	TX1 = 62
+' 
+'   SF_CS    = 61  { O }                                          ' serial flash
+	SF_CS = 61
+'   SF_SCK   = 60  { O }
+	SF_SCK = 60
+'   SF_SDO   = 59  { O }
+	SF_SDO = 59
+'   SF_SDI   = 58  { I }
+	SF_SDI = 58
+dat
+	nop
+	cogid	pa
+	coginit	pa,##$404
+	orgh	$10
+	long	0	'reserved
+	long	0 ' clock frequency: will default to 270000000
+	long	0 ' clock mode: will default to $1041afb
+	orgh	$400
+ _ret_	mov	result1, #0
+	org	0
+entry
+	cmp	ptra, #0 wz
+ if_ne	jmp	#spininit
+	mov	ptra, objptr
+	setq	#491
+	wrlong	#0, ptra++
+	rdlong	pa, #20 wz
+ if_ne	jmp	#skip_clock_set_
+	hubset	#0
+	hubset	##17046264
+	waitx	##200000
+	mov	pa, ##17046267
+	hubset	pa
+	wrlong	pa, #24
+	wrlong	##270000000, #20
+	jmp	#skip_clock_set_
+	orgf	256
+skip_clock_set_
+	call	#_main
+cogexit
+	waitx	##160000
+	cogid	arg01
+	cogstop	arg01
+spininit
+	rdlong	objptr, ptra++
+	rdlong	result1, ptra++
+	setq	#3
+	rdlong	arg01, ptra
+	sub	ptra, #4
+	call	result1
+	jmp	#cogexit
+FCACHE_LOAD_
+    mov	fcache_tmpb_,ptrb
+    pop	ptrb
+    altd	pa,ret_instr_
+    mov	 0-0, ret_instr_
+    setq	pa
+    rdlong	$0, ptrb++
+    push	ptrb
+    mov ptrb,fcache_tmpb_
+    jmp	#\$0 ' jmp to cache
+ret_instr_
+    _ret_ cmp inb,#0
+fcache_tmpb_
+    long 0
+fcache_load_ptr_
+    long FCACHE_LOAD_
+builtin_bytefill_
+        shr	arg03, #1 wc
+ if_c   wrbyte	arg02, arg01
+ if_c   add	arg01, #1
+        movbyts	arg02, #0
+builtin_wordfill_
+        shr	arg03, #1 wc
+ if_c   wrword	arg02, arg01
+ if_c   add	arg01, #2
+        setword	arg02, arg02, #1
+builtin_longfill_
+        wrfast	#0,arg01
+        cmp	arg03, #0 wz
+ if_nz  rep	#1, arg03
+ if_nz  wflong	arg02
+        ret
+COUNT_
+    long 0
+RETADDR_
+    long 0
+fp
+    long 0
+pushregs_
+    pop  pa
+    pop  RETADDR_
+    tjz  COUNT_, #pushregs_done_
+    altd  COUNT_, #511
+    setq #0-0
+    wrlong local01, ptra++
+pushregs_done_
+    setq #2 ' push 3 registers starting at COUNT_
+    wrlong COUNT_, ptra++
+    mov    fp, ptra
+    jmp  pa
+ popregs_
+    pop    pa
+    setq   #2
+    rdlong COUNT_, --ptra
+    djf    COUNT_, #popregs__ret
+    setq   COUNT_
+    rdlong local01, --ptra
+popregs__ret
+    push   RETADDR_
+    jmp    pa
+
+divide_
+       abs     muldivb_,muldivb_     wcz      'abs(y)
+       wrc     itmp2_                         'store sign of y
+       abs     muldiva_,muldiva_     wc       'abs(x)
+       qdiv    muldiva_, muldivb_             'queue divide
+ if_c  xor     itmp2_,#1                      'store sign of x
+       getqx   muldivb_                       'get quotient
+       getqy   muldiva_                       'get remainder
+       negc    muldiva_,muldiva_              'restore sign, remainder (sign of x)
+       testb   itmp2_,#0             wc       'restore sign, division result
+ _ret_ negc    muldivb_,muldivb_     
+__pc long 0
+__setjmp
+    pop __pc
+    mov result1, #0
+    mov result2, #0
+    mov abortchain, arg01
+    wrlong fp, arg01
+    add arg01, #4
+    wrlong ptra, arg01
+    add arg01, #4
+    wrlong objptr, arg01
+    add arg01, #4
+    wrlong __pc, arg01
+    jmp __pc
+__unwind_pc long 0
+__unwind_stack
+   pop  __unwind_pc
+__unwind_loop
+   cmp  arg01, arg02 wz
+  if_z jmp #__unwind_stack_ret
+   mov   ptra, arg01
+   call  #popregs_
+   mov   arg01, fp
+   jmp   #__unwind_loop
+__unwind_stack_ret
+   jmp  __unwind_pc
+__longjmp
+    pop __pc
+    cmp    arg01, #0 wz
+ if_z jmp #nocatch
+    mov result1, arg02
+    mov result2, #1
+    rdlong arg02, arg01
+    add arg01, #4
+    rdlong ptra, arg01
+    add arg01, #4
+    rdlong objptr, arg01
+    add arg01, #4
+    rdlong __pc, arg01
+    mov arg01, fp
+    call #__unwind_stack
+__longjmp_ret
+    jmp  __pc
+nocatch
+    cmp arg03, #0 wz
+ if_z jmp #cogexit
+    jmp #__longjmp_ret
+
+abortchain
+	long	0
+entryptr__
+	long	@entry
+itmp1_
+	long	0
+itmp2_
+	long	0
+objptr
+	long	@objmem
+ptr___system__dat__
+	long	@__system__dat_
+ptr__isp_bldc_motor_dat__
+	long	@_isp_bldc_motor_dat_
+ptr__isp_steering_2wheel_dat__
+	long	@_isp_steering_2wheel_dat_
+ptr__isp_steering_2wheel_taskPostionSense_
+	long	@_isp_steering_2wheel_taskPostionSense
+result1
+	long	0
+result2
+	long	1
+result3
+	long	2
+COG_BSS_START
+	fit	480
+	orgh
+hubentry
+
+' 
+' PUB main() | basePinLt, basePinRt, voltage, motor, detectModeLt, detectModeRt
+_main
+	mov	COUNT_, #7
+	call	#pushregs_
+	brk	#1
+' 
+'     ' validate user settings/choicess
+'     '  do NOT start motor unless all are legit!
+'     basePinLt := wheels.validBasePinForChoice(user.LEFT_MOTOR_BASE)
+	mov	arg01, #0
+' '' VALIDATE users' base-pin choice returns legalBasePin or INVALID_PIN_BASE
+'     legalBasePin := ltWheel.validBasePinForChoice(userBasePin)
+	add	objptr, #388
+' '' VALIDATE users' base-pin choice returns legalBasePin or INVALID_PIN_BASE
+'     legalBasePin := validatePinBase(userBasePin)
+	call	#_isp_bldc_motor_validatePinBase
+	mov	0-0, result1
+	brk	#47
+	mov	local01, result1
+'     basePinRt := wheels.validBasePinForChoice(user.RIGHT_MOTOR_BASE)
+	mov	arg01, #16
+' '' VALIDATE users' base-pin choice returns legalBasePin or INVALID_PIN_BASE
+'     legalBasePin := ltWheel.validBasePinForChoice(userBasePin)
+' '' VALIDATE users' base-pin choice returns legalBasePin or INVALID_PIN_BASE
+'     legalBasePin := validatePinBase(userBasePin)
+	call	#_isp_bldc_motor_validatePinBase
+	mov	0-0, result1
+	brk	#47
+	mov	local02, result1
+'     detectModeLt := wheels.validDetectModeForChoice(user.LEFT_BOARD_TYPE)
+	mov	arg01, #32
+' '' VALIDATE users' detection mode choice returns legalMode or INVALID_DET_MODE
+'     legalMode := ltWheel.validDetectModeForChoice(userDetMode)
+	call	#_isp_bldc_motor_validDetectModeForChoice
+	mov	local03, result1
+'     detectModeRt := wheels.validDetectModeForChoice(user.RIGHT_BOARD_TYPE)
+	mov	arg01, #32
+' '' VALIDATE users' detection mode choice returns legalMode or INVALID_DET_MODE
+'     legalMode := ltWheel.validDetectModeForChoice(userDetMode)
+	call	#_isp_bldc_motor_validDetectModeForChoice
+	mov	local04, result1
+'     voltage := wheels.validVoltageForChoice(user.DRIVE_VOLTAGE)
+	mov	arg01, #6
+' '' VALIDATE users' voltage choice returns legalVoltage or INVALID_VOLTAGE
+'     legalVoltage := ltWheel.validVoltageForChoice(userVoltage)
+	call	#_isp_bldc_motor_validVoltageForChoice
+	mov	local05, result1
+'     motor := wheels.validMotorForChoice(user.MOTOR_TYPE)
+	mov	arg01, #0
+' '' VALIDATE users' motor choice returns legalMotor or INVALID_MOTOR
+'     legalMotor := ltWheel.validMotorForChoice(userMotor)
+' '' VALIDATE users' motor choice returns legalMotor or INVALID_MOTOR
+'     legalMotor := userMotor
+	mov	local06, #0
+'     if lookdown(userMotor: MOTR_6_5_INCH, MOTR_DOCO_4KRPM) == 0
+	mov	arg03, ptr__isp_bldc_motor_dat__
+	add	arg03, ##2028
+	mov	arg02, #1
+	mov	arg04, #2
+	call	#__system___lookdown
+	cmp	result1, #0 wz
+'         legalMotor := INVALID_MOTOR
+ if_e	neg	local06, #1
+	mov	0-0, local06
+	brk	#49
+	mov	result1, local06
+	sub	objptr, #388
+' 
+'     if basePinLt <> wheels.INVALID_PIN_BASE and basePinRt <> wheels.INVALID_PIN_BASE and voltage <> wheels.INVALID_VOLTAGE and motor <> wheels.INVALID_MOTOR and detectModeLt <> wheels.INVALID_DET_MODE and detectModeRt <> wheels.INVALID_DET_MODE
+	cmp	local01, ##-1 wz
+ if_ne	cmp	local02, ##-1 wz
+ if_ne	cmp	local05, ##-1 wz
+ if_ne	cmp	result1, ##-1 wz
+ if_ne	cmp	local03, ##-1 wz
+ if_ne	cmp	local04, ##-1 wz
+ if_e	jmp	#LR__0005
+	rdlong	muldivb_, #20
+	abs	muldivb_, muldivb_ wc
+	qdiv	muldivb_, ##1000
+'         ' start our dual motor driver
+' 
+'         ' start our motor drivers (left and right)
+'         wheels.start(basePinLt, basePinRt, voltage, detectModeLt, detectModeRt)
+	mov	arg01, local01
+	getqx	muldivb_
+	negc	muldivb_, muldivb_
+	wrlong	muldivb_, objptr
+	rdlong	muldiva_, #20
+	abs	muldiva_, muldiva_ wc
+	qdiv	muldiva_, ##1000000
+' '' Start our drive cogs connected to our left and right motor control pin-sets
+'     ticks1ms   := (clkfreq / 1_000)
+	getqx	muldiva_
+	qmul	muldivb_, #125
+	negc	muldivb_, muldiva_
+'     ticks1us   := (clkfreq / 1_000_000)
+	add	objptr, #4
+	wrlong	muldivb_, objptr
+'     ticks125ms := ticks1ms * 125
+	add	objptr, #4
+' 
+'     ' iff HDMI is needed, then we need this!
+'     'if clkfreq <> 270_000_000
+'     '    debug("!! ERROR bad CLOCK value")
+'     '    repeat ' halt here
+' 
+'     ltcog := ltWheel.startEx(leftBasePin, driveVoltage, leftDetectMode, true)
+	mov	arg02, local05
+	mov	arg03, local03
+	neg	arg04, #1
+	getqx	muldivb_
+	wrlong	muldivb_, objptr
+	add	objptr, #380
+	call	#_isp_bldc_motor_startEx
+	mov	local03, result1
+'     ltWheel.testSetMotorId(@"ltMot")
+	mov	arg02, ##@LR__0450
+	mov	arg01, objptr
+	add	arg01, #80
+' '' TESTING USE: save name used in debug messages
+'     strcopy(@motorId, pIdStr, MOTOR_ID_STRLEN)
+	mov	arg03, #10
+	call	#__system____builtin_strncpy
+'     rtcog := rtWheel.startEx(rightBasePin, driveVoltage, rightDetectMode, true)
+	mov	arg01, local02
+	mov	arg02, local05
+	mov	arg03, local04
+	neg	arg04, #1
+	add	objptr, ##788
+	call	#_isp_bldc_motor_startEx
+	mov	local05, result1
+'     rtWheel.testSetMotorId(@"rtMot")
+	mov	arg02, ##@LR__0451
+	mov	arg01, objptr
+	add	arg01, #80
+' '' TESTING USE: save name used in debug messages
+'     strcopy(@motorId, pIdStr, MOTOR_ID_STRLEN)
+	mov	arg03, #10
+	call	#__system____builtin_strncpy
+'     rtWheel.forwardIsReverse()
+' '' Call when we have two motors and one of them needs to be reversed
+'     motorIsReversed := TRUE
+	add	objptr, #56
+	wrlong	##-1, objptr
+	mov	arg04, local03
+	sub	arg04, #1
+	decod	arg04, arg04
+	mov	arg03, local05
+	sub	arg03, #1
+	decod	arg03, arg03
+	or	arg04, arg03
+'     cogmask := (1<<(ltcog-1))|(1<<(rtcog-1))
+	sub	objptr, ##920
+	wrlong	arg04, objptr
+	sub	objptr, #312
+'     waitms(100)
+	mov	arg01, #100
+	call	#__system___waitms
+	sub	local03, #1
+	mov	0-0, local03
+	sub	local05, #1
+	mov	1-0, local05
+	brk	#13
+'     cogatn(cogmask)                                     ' sync the 2 motor cogs
+	add	objptr, #312
+	rdlong	arg01, objptr
+	cogatn	arg01
+' 
+'     _, ticsPerRotation := ltWheel.hallTicInfoForMotor()
+' '' Return numbers for user selected motor (for use by two-wheel-steering object!)
+'     if user.MOTOR_TYPE == user.MOTR_DOCO_4KRPM
+'         ' degrees = ticks * 4
+'         degreesPerTic := 4
+'         ' rotations = ticks / 90
+'         ticsPerRotation := 90
+	mov	local05, #90
+'     if user.WHEEL_DIA_IN_INCH <> 0                      ' use wheel diameter independent of motor type
+'         circInMM_x10 := distConv.circInMMforDiaInInchFloat(user.WHEEL_DIA_IN_INCH) * 10
+	mov	arg01, ##1087373312
+	add	objptr, ##1652
+	call	#_isp_dist_utils_circInMMforDiaInInchFloat
+	mov	local04, result1
+	mov	muldiva_, local04
+	shl	muldiva_, #2
+	add	muldiva_, local04
+	shl	muldiva_, #1
+	sub	objptr, ##1688
+	wrlong	muldiva_, objptr
+	sub	objptr, #276
+	mov	muldivb_, local05
+	call	#divide_
+'         tickInMM_x10 := circInMM_x10 / ticsPerRotation
+	add	objptr, #280
+	wrlong	muldivb_, objptr
+' 
+'     ' init user tracking vars
+'     motorStopHallTicks := 0
+	add	objptr, #4
+	wrlong	#0, objptr
+'     motorStopMSecs := 0
+	add	objptr, #4
+	wrlong	#0, objptr
+'     rqstPower := 0
+	add	objptr, #4
+	wrlong	#0, objptr
+'     rqstLtPower := 0
+	add	objptr, #8
+	wrlong	#0, objptr
+'     rqstRtPower := 0
+	add	objptr, #4
+	wrlong	#0, objptr
+'     rqstDirection := 0
+	sub	objptr, #8
+	wrlong	#0, objptr
+'     userCutoff := FALSE
+	add	objptr, #12
+	wrlong	#0, objptr
+'     notUsed := 0
+	add	objptr, #8
+	wrlong	#0, objptr
+	sub	objptr, #316
+' 
+'     ok := senseCog := cogspin(NEWCOG, taskPostionSense(), @taskStack) + 1
+	mov	local05, objptr
+	add	objptr, #16
+	mov	arg03, objptr
+	wrlong	local05, arg03
+	add	arg03, #4
+	wrlong	ptr__isp_steering_2wheel_taskPostionSense_, arg03
+	mov	arg02, entryptr__
+	mov	result1, #16
+	setq	objptr
+	coginit	result1, arg02 wc
+ if_b	neg	result1, #1
+	add	result1, #1
+	mov	local07, result1 wz
+	sub	objptr, #4
+	wrlong	local07, objptr
+'     if senseCog == 0    ' did fail?
+	sub	objptr, #12
+ if_ne	jmp	#LR__0001
+	brk	#14
+LR__0001
+' 
+'         ' just don't draw current at stop
+'         wheels.holdAtStop(false)
+' '' Informs the motor drivers to actively hold position (bEnable=true) or coast (bEnable=false) at end of motion
+'     ltWheel.holdAtStop(bEnable)
+' '' Informs the motor control cog to actively hold position (bEnable=true) or coast (bEnable=false) at end of motion
+'     stop_mode := (bEnable) ? SM_BRAKE : SM_FLOAT
+	add	objptr, ##1151
+	wrlong	#1, objptr
+'     rtWheel.holdAtStop(bEnable)
+' '' Informs the motor control cog to actively hold position (bEnable=true) or coast (bEnable=false) at end of motion
+'     stop_mode := (bEnable) ? SM_BRAKE : SM_FLOAT
+	add	objptr, ##788
+	wrlong	#1, objptr
+	sub	objptr, ##1939
+'         'wheels.setMaxSpeed(100)  ' override 75% with 100%
+' 
+'         ' now drive!
+'         waitUntilMotorReady()
+'     if wheels.isReady() == false
+	call	#_isp_steering_2wheel_isReady
+	cmp	result1, #0 wz
+ if_ne	jmp	#LR__0004
+	brk	#8
+'         repeat
+LR__0002
+'             if wheels.isReady()
+	call	#_isp_steering_2wheel_isReady
+	cmp	result1, #0 wz
+'                 quit
+ if_ne	jmp	#LR__0003
+'             else
+'                 waitms(2)
+	mov	arg01, #2
+	call	#__system___waitms
+	jmp	#LR__0002
+LR__0003
+LR__0004
+	brk	#9
+	brk	#2
+'         wheels.driveForDistance(1, 1, wheels.DDU_FT)
+' '' Control the forward direction or rate of turn of your robot using the {leftDistance} and {rightDistance} inputs.
+' '' Turn both motors on then turn them off again when either reaches the specified distance {leftDistance} or
+' ''  {rightDistance}, where {*distance} is in {distanceUnits} [DDU_IN, DDU_FT, DDU_CM, or DDU_M].
+' '' AFFECTED BY: setAcceleration(), setMaxSpeedForDistance(), holdAtStop()
+'     shorterDistance := leftDistance < rightDistance ? leftDistance : rightDistance
+'     stopAfterDistance(shorterDistance, eDistanceUnits)
+	mov	arg01, #1
+	mov	arg02, #4
+	call	#_isp_steering_2wheel_stopAfterDistance
+'     maxLtSpeed := ltWheel.getMaxSpeedForDistance()
+' '' Returns the last specified {maxSpeedForDistance}
+'     nSpeed4dist := maxSpeed4dist  ' return last specified user value
+	add	objptr, #428
+	rdlong	arg01, objptr
+'     maxRtSpeed := rtWheel.getMaxSpeedForDistance()
+' '' Returns the last specified {maxSpeedForDistance}
+'     nSpeed4dist := maxSpeed4dist  ' return last specified user value
+	add	objptr, ##788
+	rdlong	arg02, objptr
+	sub	objptr, ##1216
+'     driveAtPower(maxLtSpeed, maxRtSpeed)
+	call	#_isp_steering_2wheel_driveAtPower
+'         waitUntilMotorDone()
+	call	#_waitUntilMotorDone
+	brk	#3
+'         wheels.driveDirection(80, -25)
+	mov	arg01, #80
+	neg	arg02, #25
+	call	#_isp_steering_2wheel_driveDirection
+'         wheels.stopAfterTime(15, wheels.DTU_SEC)      ' hold at speed for 15 Sec
+	mov	arg01, #15
+	mov	arg02, #2
+	call	#_isp_steering_2wheel_stopAfterTime
+' 
+'         waitUntilMotorDone()
+	call	#_waitUntilMotorDone
+' 
+'         wheels.driveDirection(80, 25)
+	mov	arg01, #80
+	mov	arg02, #25
+	call	#_isp_steering_2wheel_driveDirection
+'         wheels.stopAfterTime(15, wheels.DTU_SEC)      ' hold at speed for 15 Sec
+	mov	arg01, #15
+	mov	arg02, #2
+	call	#_isp_steering_2wheel_stopAfterTime
+' 
+'         waitUntilMotorDone()
+	call	#_waitUntilMotorDone
+	brk	#4
+'         wheels.driveAtPower(100, 0)
+	mov	arg01, #100
+	mov	arg02, #0
+	call	#_isp_steering_2wheel_driveAtPower
+'         wheels.stopAfterTime(15, wheels.DTU_SEC)      ' hold at speed for 15 Sec
+	mov	arg01, #15
+	mov	arg02, #2
+	call	#_isp_steering_2wheel_stopAfterTime
+' 
+'         waitUntilMotorDone()
+	call	#_waitUntilMotorDone
+	brk	#5
+'         wheels.driveAtPower(0, 100)
+	mov	arg01, #0
+	mov	arg02, #100
+	call	#_isp_steering_2wheel_driveAtPower
+'         wheels.stopAfterTime(15, wheels.DTU_SEC)      ' hold at speed for 15 Sec
+	mov	arg01, #15
+	mov	arg02, #2
+	call	#_isp_steering_2wheel_stopAfterTime
+' 
+'         waitUntilMotorDone()
+	call	#_waitUntilMotorDone
+' '}
+'         ' turn off our motor drivers
+'         wheels.stop()
+' '' Stop our left/right drive and Sense cogs and release allocated pins
+'     if senseCog     ' stop motor reads
+	add	objptr, #12
+	rdlong	arg01, objptr wz
+	sub	objptr, #12
+ if_ne	sub	arg01, #1
+'         cogstop(senseCog - 1)
+ if_ne	cogstop	arg01
+'         senseCog := 0
+ if_ne	add	objptr, #12
+ if_ne	wrlong	#0, objptr
+ if_ne	sub	objptr, #12
+' 
+'     ltWheel.stop()
+	add	objptr, #388
+	call	#_isp_bldc_motor_stop
+'     rtWheel.stop()
+	add	objptr, ##788
+	call	#_isp_bldc_motor_stop
+	sub	objptr, ##1176
+	jmp	#LR__0006
+LR__0005
+'     else
+	brk	#6
+LR__0006
+	brk	#7
+	mov	ptra, fp
+	call	#popregs_
+_main_ret
+	ret
+
+' 
+' 
+' PRI waitUntilMotorDone()
+_waitUntilMotorDone
+'     if wheels.isStarting() == false
+	call	#_isp_steering_2wheel_isStarting
+	cmp	result1, #0 wz
+ if_ne	jmp	#LR__0012
+	brk	#10
+'          repeat
+LR__0010
+'             if wheels.isStarting()
+	call	#_isp_steering_2wheel_isStarting
+	cmp	result1, #0 wz
+'                 quit
+ if_ne	jmp	#LR__0011
+'             else
+'                 waitms(2)
+	mov	arg01, #2
+	call	#__system___waitms
+	jmp	#LR__0010
+LR__0011
+LR__0012
+' 
+'     if wheels.isStopped() == false
+	call	#_isp_steering_2wheel_isStopped
+	cmp	result1, #0 wz
+ if_ne	jmp	#LR__0015
+	brk	#11
+'         repeat
+LR__0013
+'             if wheels.isStopped()
+	call	#_isp_steering_2wheel_isStopped
+	cmp	result1, #0 wz
+'                 quit
+ if_ne	jmp	#LR__0014
+'             else
+'                 waitms(2)
+	mov	arg01, #2
+	call	#__system___waitms
+	jmp	#LR__0013
+LR__0014
+LR__0015
+	brk	#12
+_waitUntilMotorDone_ret
+	ret
+
+' 
+' PUB driveDirection(power, direction)
+_isp_steering_2wheel_driveDirection
+' '' Control the speed and direction of your robot using the {power} and {direction} inputs.
+' '' Turns both motors on at {power, [(-100) to 100]} but adjusted by {direction, [(-100) to 100]}.
+' '' AFFECTED BY: setAcceleration(), setMaxSpeed(), holdAtStop()
+'     rqstPower, rqstDirection := power, direction        ' calculate effective power based on direction
+	add	objptr, #292
+	wrlong	arg01, objptr
+	add	objptr, #4
+	wrlong	arg02, objptr
+	sub	objptr, #296
+'     driveAtPower(calcPowerForDirection(power, direction))
+	call	#_isp_steering_2wheel_calcPowerForDirection
+	mov	arg01, result1
+	mov	arg02, result2
+	call	#_isp_steering_2wheel_driveAtPower
+_isp_steering_2wheel_driveDirection_ret
+	ret
+
+' 
+' PUB driveAtPower(leftPower, rightPower)
+_isp_steering_2wheel_driveAtPower
+' '' Control the speed and direction of your robot using the {leftPower} and {rightPower} inputs.
+' '' Turns left motor on at {leftPower} and right at {rightPower}. Where {*Power} are in the range [(-100) to 100].
+' '' AFFECTED BY: setAcceleration(), setMaxSpeed(), holdAtStop()
+'     rqstLtPower, rqstRtPower := leftPower, rightPower
+	add	objptr, #300
+	wrlong	arg01, objptr
+	add	objptr, #4
+	wrlong	arg02, objptr
+' 
+'     ltWheel.driveAtPowerEx(rqstLtPower, true)
+	neg	arg02, #1
+	add	objptr, #84
+	call	#_isp_bldc_motor_driveAtPowerEx
+'     rtWheel.driveAtPowerEx(rqstRtPower, true)
+	sub	objptr, #84
+	rdlong	arg01, objptr
+	neg	arg02, #1
+	add	objptr, ##872
+	call	#_isp_bldc_motor_driveAtPowerEx
+'     cogatn(cogmask)                                     ' sync the 2 motor cogs
+	sub	objptr, ##864
+	rdlong	arg01, objptr
+	cogatn	arg01
+'     ltWheel.SyncStatus()                                ' make sure both motors have taken value
+' '' Wait until both motors are in sync (when configured for synchronization)
+'     repeat while targetIncre & $8000_0000
+	add	objptr, ##639
+LR__0020
+	rdlong	arg02, objptr
+	testbn	arg02, #31 wz
+ if_ne	jmp	#LR__0020
+'     rtWheel.SyncStatus()
+' '' Wait until both motors are in sync (when configured for synchronization)
+'     repeat while targetIncre & $8000_0000
+	add	objptr, ##788
+LR__0021
+	rdlong	arg02, objptr
+	testbn	arg02, #31 wz
+ if_ne	jmp	#LR__0021
+	sub	objptr, ##563
+	sub	objptr, ##1176
+_isp_steering_2wheel_driveAtPower_ret
+	ret
+
+' 
+' 
+' '' Stops both motors, after either of the motors reaches {distance} specified in {distanceUnits} [DDU_IN or DDU_MM].
+' '' USE WITH: driveDirection(), drive()
+' PUB stopAfterDistance(nDistance, eDistanceUnits) | fValue
+_isp_steering_2wheel_stopAfterDistance
+	mov	COUNT_, #4
+	call	#pushregs_
+	mov	local01, arg01
+	mov	local02, arg02
+' '' Stops the motors after one of them reaches {distance} specified in {distanceUnits} [DDU_MM, DDU_CM, DDU_IN, DDU_FT, DDU_M].
+' '' USE WITH:  driveAtPower()
+' '' Will ABORT if {distance} < 1
+'     if nDistance < 1
+	cmps	local01, #1 wc
+ if_ae	jmp	#LR__0030
+	mov	0-0, local01
+	brk	#15
+'         ' FIXME: UNDONE should be more than ticks needed for spin-up/down ramps!!!
+'         abort
+	mov	arg01, abortchain
+	mov	arg02, #0
+	mov	arg03, #0
+	call	#__longjmp
+LR__0030
+' 
+'     ' if user configured wheel-diameter is 0.0 then tickInMM_x10 is 0
+'     ' if so, abort this method as we can't do this!
+'     if tickInMM_x10 == 0
+	add	objptr, #280
+	rdlong	result1, objptr wz
+	sub	objptr, #280
+ if_ne	jmp	#LR__0031
+	brk	#16
+'         abort
+	mov	arg01, abortchain
+	mov	arg02, #0
+	mov	arg03, #0
+	call	#__longjmp
+LR__0031
+' 
+'     resetTracking()  ' clear tracking values to start counting again
+' '' Resets the position tracking values returned by getDistance() and getRotations()
+' ''  Effectively: use current position as home from now on
+'     ltWheel.resetWindowAccumulators()
+	add	objptr, #388
+	call	#_isp_bldc_motor_resetWindowAccumulators
+'     rtWheel.resetWindowAccumulators()
+	add	objptr, ##788
+	call	#_isp_bldc_motor_resetWindowAccumulators
+	sub	objptr, ##1176
+' 
+'     ' convert distance to ticks (will stop at ticks limit)
+'     ' Distance is translated to Hall ticks and compared with left and right motor hall ticks
+'     ' The motor ticks are from start but reset on fault or estop.
+'     ' So, need to getDistance and add required distance to it, to stop after a distance
+'     ' So, call getDistance, then driveAtPower to start moving and then stopAfterDistance with total distance to stop.
+'     ' If a fault occurs, will stop immedetely and hall ticks are reset on the faulting motor.
+'     ' getDistance returns each motor separately. So use largest return distance to calculate stopAfterDistance
+'     case eDistanceUnits
+	mov	local03, local02
+	sub	local03, #1
+	fle	local03, #5
+	jmprel	local03
+LR__0032
+	jmp	#LR__0033
+	jmp	#LR__0034
+	jmp	#LR__0035
+	jmp	#LR__0036
+	jmp	#LR__0037
+	jmp	#LR__0038
+LR__0033
+'         DDU_MM:
+'             motorStopHallTicks := (nDistance * 10) / tickInMM_x10
+	mov	muldiva_, local01
+	shl	muldiva_, #2
+	add	muldiva_, local01
+	shl	muldiva_, #1
+	add	objptr, #280
+	rdlong	muldivb_, objptr
+	sub	objptr, #280
+	call	#divide_
+	add	objptr, #284
+	wrlong	muldivb_, objptr
+	sub	objptr, #284
+	jmp	#LR__0039
+LR__0034
+'         DDU_CM:
+'             motorStopHallTicks := (nDistance * 10 * 10) / tickInMM_x10
+	mov	local03, local01
+	shl	local03, #2
+	add	local03, local01
+	shl	local03, #1
+	mov	muldiva_, local03
+	shl	muldiva_, #2
+	add	muldiva_, local03
+	shl	muldiva_, #1
+	add	objptr, #280
+	rdlong	muldivb_, objptr
+	sub	objptr, #280
+	call	#divide_
+	add	objptr, #284
+	wrlong	muldivb_, objptr
+	sub	objptr, #284
+	jmp	#LR__0039
+LR__0035
+'         DDU_IN:
+'             fValue := distConv.fIn2mm(nDistance)
+	add	objptr, ##1964
+' '' Convert distance in inch to mm
+'     ' RULE: One inch is equal to 25.4 mm
+'     fValue := float(nDistInInch) *. kMM_IN_INCH
+	abs	arg01, local01 wc
+ if_b	decod	local04, #31
+ if_ae	mov	local04, #0
+	call	#__system___float_fromuns
+	xor	result1, local04
+	mov	arg01, result1
+	mov	arg02, ##1103835955
+	call	#__system___float_mul
+'     fDistInMM := fValue
+	sub	objptr, ##1964
+	mov	arg01, result1
+'             motorStopHallTicks := round(fValue *. 10.0) / tickInMM_x10
+	mov	arg02, ##1092616192
+	call	#__system___float_mul
+	mov	arg01, result1
+	mov	arg02, #1
+	call	#__system___float_tointeger
+	mov	muldiva_, result1
+	add	objptr, #280
+	rdlong	muldivb_, objptr
+	sub	objptr, #280
+	call	#divide_
+	add	objptr, #284
+	wrlong	muldivb_, objptr
+	sub	objptr, #284
+	jmp	#LR__0039
+LR__0036
+'         DDU_FT:
+'             fValue := distConv.fIn2mm(nDistance * 12)
+	mov	arg01, local01
+	shl	arg01, #1
+	add	arg01, local01
+	shl	arg01, #2
+	add	objptr, ##1964
+' '' Convert distance in inch to mm
+'     ' RULE: One inch is equal to 25.4 mm
+'     fValue := float(nDistInInch) *. kMM_IN_INCH
+	abs	arg01, arg01 wc
+ if_b	decod	local04, #31
+ if_ae	mov	local04, #0
+	call	#__system___float_fromuns
+	xor	result1, local04
+	mov	arg01, result1
+	mov	arg02, ##1103835955
+	call	#__system___float_mul
+'     fDistInMM := fValue
+	sub	objptr, ##1964
+	mov	arg01, result1
+'             motorStopHallTicks := round(fValue *. 10.0) / tickInMM_x10
+	mov	arg02, ##1092616192
+	call	#__system___float_mul
+	mov	arg01, result1
+	mov	arg02, #1
+	call	#__system___float_tointeger
+	mov	muldiva_, result1
+	add	objptr, #280
+	rdlong	muldivb_, objptr
+	sub	objptr, #280
+	call	#divide_
+	add	objptr, #284
+	wrlong	muldivb_, objptr
+	sub	objptr, #284
+	jmp	#LR__0039
+LR__0037
+	qmul	local01, #100
+'         DDU_M:
+'             motorStopHallTicks := (nDistance * 100 * 10) / tickInMM_x10
+	add	objptr, #280
+	rdlong	muldivb_, objptr
+	sub	objptr, #280
+	getqx	local03
+	mov	muldiva_, local03
+	shl	muldiva_, #2
+	add	muldiva_, local03
+	shl	muldiva_, #1
+	call	#divide_
+	add	objptr, #284
+	wrlong	muldivb_, objptr
+	sub	objptr, #284
+	jmp	#LR__0039
+LR__0038
+	mov	0-0, local02
+	brk	#17
+'             abort
+	mov	arg01, abortchain
+	mov	arg02, #0
+	mov	arg03, #0
+	call	#__longjmp
+LR__0039
+	mov	result1, #0
+	mov	ptra, fp
+	call	#popregs_
+_isp_steering_2wheel_stopAfterDistance_ret
+	ret
+
+' 
+' 
+' '' Stops both motors, after either of the motors reaches {distance} specified in {distanceUnits} [DDU_IN or DDU_MM].
+' '' USE WITH: driveDirection(), drive()
+' PUB stopAfterTime(nTime, eTimeUnits) | timeNow
+_isp_steering_2wheel_stopAfterTime
+	mov	COUNT_, #4
+	call	#pushregs_
+	mov	local01, arg01
+	mov	local02, arg02
+' '' Stops the motors after {time} specified in {timeUnits} [DTU_MILLISEC or DTU_SEC] has elapsed.
+' '' USE WITH:  driveAtPower()
+' '' Will ABORT if {time} < 1
+'     if nTime < 1
+	cmps	local01, #1 wc
+ if_ae	jmp	#LR__0040
+	mov	0-0, local01
+	brk	#18
+'         ' FIXME: UNDONE should be more than time needed for spin-up/down ramps!!!
+'         abort
+	mov	arg01, abortchain
+	mov	arg02, #0
+	mov	arg03, #0
+	call	#__longjmp
+LR__0040
+' 
+'     case eTimeUnits
+	cmp	local02, #1 wz
+ if_ne	cmp	local02, #2 wz
+ if_e	jmp	#LR__0041
+	mov	0-0, local02
+	brk	#19
+'             abort
+	mov	arg01, abortchain
+	mov	arg02, #0
+	mov	arg03, #0
+	call	#__longjmp
+LR__0041
+' 
+'     if eTimeUnits == DTU_SEC
+	cmp	local02, #2 wz
+ if_ne	jmp	#LR__0042
+'         timeNow := getms()
+	call	#__system___getms
+	qmul	local01, ##1000
+	mov	local03, result1
+	mov	local04, local03
+'         motorStopMSecs := timeNow + (nTime * 1_000)
+'         if motorStopMSecs == 0
+'           motorStopMSecs := 1
+	getqx	local02
+	add	local04, local02 wz
+	jmp	#LR__0043
+LR__0042
+'     else
+'         timeNow := getms()
+	call	#__system___getms
+	mov	local03, result1
+	mov	local04, local03
+	add	local04, local01 wz
+'         motorStopMSecs := timeNow + nTime
+'         if motorStopMSecs == 0
+'           motorStopMSecs := 1
+LR__0043
+	add	objptr, #288
+	wrlong	local04, objptr
+	sub	objptr, #288
+ if_e	add	objptr, #288
+ if_e	wrlong	#1, objptr
+ if_e	sub	objptr, #288
+' 
+'     if motorStopMSecs > 0
+	add	objptr, #288
+	rdlong	local04, objptr
+	sub	objptr, #288
+	cmps	local04, #1 wc
+ if_b	jmp	#LR__0044
+	mov	0-0, local04
+	mov	1-0, local03
+	brk	#20
+LR__0044
+	mov	result1, #0
+	mov	ptra, fp
+	call	#popregs_
+_isp_steering_2wheel_stopAfterTime_ret
+	ret
+
+' 
+' PUB stopMotors()
+_isp_steering_2wheel_stopMotors
+' '' Stops both motors, killing any motion that was still in progress
+' '' AFFECTED BY:holdAtStop()
+'     rqstPower := rqstLtPower := rqstRtPower := 0
+	add	objptr, #304
+	wrlong	#0, objptr
+	sub	objptr, #4
+	wrlong	#0, objptr
+	sub	objptr, #8
+	wrlong	#0, objptr
+'     ltWheel.stopMotor()
+	add	objptr, #96
+' '' Stops the motor, killing any motion that was still in progress
+' ''  AFFECTED BY:holdAtStop()
+'     setTargetAccel(0, false)
+	mov	arg01, #0
+	mov	arg02, #0
+	call	#_isp_bldc_motor_setTargetAccel
+'     rtWheel.stopMotor()
+	add	objptr, ##788
+' '' Stops the motor, killing any motion that was still in progress
+' ''  AFFECTED BY:holdAtStop()
+'     setTargetAccel(0, false)
+	mov	arg01, #0
+	mov	arg02, #0
+	call	#_isp_bldc_motor_setTargetAccel
+	sub	objptr, ##1176
+_isp_steering_2wheel_stopMotors_ret
+	ret
+
+' 
+' PRI calcPowerForDirection(power, direction) : ltPower, rtPower | limitPwr, limitDir, reducedPower
+_isp_steering_2wheel_calcPowerForDirection
+	neg	_var01, #100
+	fges	_var01, arg01
+	fles	_var01, #100
+	neg	_var02, #100
+	fges	_var02, arg02
+	fles	_var02, #100
+	abs	result1, _var02
+	mov	result2, #100
+	sub	result2, result1
+	qmul	result2, _var01
+' ' determine porportional power based on direction
+'     limitPwr :=  -100 #> power <# 100
+'     limitDir :=  -100 #> direction <# 100
+'     reducedPower := ((100 - abs(limitDir)) * limitPwr) / 100                    ' calculate reduced power for turning
+	getqx	result1
+	abs	result1, result1 wc
+	qdiv	result1, #100
+'     {
+'     }
+'     ltPower := ((limitDir <= 0)) ? limitPwr : reducedPower                      ' which side if either should be reducedpower
+'     rtPower := ((limitDir >= 0)) ? limitPwr : reducedPower
+	getqx	result1
+	negc	_var03, result1
+	cmps	_var02, #1 wc
+ if_b	mov	result2, _var01
+ if_ae	mov	result2, _var03
+	mov	result1, result2
+	cmps	_var02, #0 wc
+ if_ae	mov	result2, _var01
+ if_b	mov	result2, _var03
+	mov	0-0, arg01
+	mov	1-0, arg02
+	mov	2-0, result1
+	mov	3-0, result2
+	brk	#26
+_isp_steering_2wheel_calcPowerForDirection_ret
+	ret
+
+' 
+' PUB isReady() : bState
+_isp_steering_2wheel_isReady
+' '' Return T/F where T means the both motor cogs are running
+'     bState := ltWheel.isReady() and rtWheel.isReady()
+	mov	_var01, #0
+' '' Return T/F where T means the motor cog is running
+'     bState := (drv_state <> DCS_Unknown) ? true : false
+	add	objptr, ##1007
+	rdlong	_var02, objptr wz
+ if_ne	neg	result1, #1
+ if_e	mov	result1, #0
+	cmp	result1, #0 wz
+ if_ne	not	_var01, #0
+	mov	_var03, #0
+' '' Return T/F where T means the motor cog is running
+'     bState := (drv_state <> DCS_Unknown) ? true : false
+	add	objptr, ##788
+	rdlong	_var02, objptr wz
+ if_ne	neg	result1, #1
+ if_e	mov	result1, #0
+	sub	objptr, ##1795
+	cmp	result1, #0 wz
+ if_ne	not	_var03, #0
+	and	_var01, _var03
+	mov	result1, _var01
+_isp_steering_2wheel_isReady_ret
+	ret
+
+' 
+' PUB isStopped() : bState
+_isp_steering_2wheel_isStopped
+' '' Return T/F where T means the both motors are stopped
+'     bState := ltWheel.isStopped() and rtWheel.isStopped()
+	mov	_var01, #0
+' '' Return T/F where T means the motor is stopped
+'     bState := (drv_state == DCS_STOPPED) ? true : false
+	add	objptr, ##1007
+	rdlong	_var02, objptr
+	cmp	_var02, #1 wz
+ if_e	neg	result1, #1
+ if_ne	mov	result1, #0
+	cmp	result1, #0 wz
+ if_ne	not	_var01, #0
+	mov	_var03, #0
+' '' Return T/F where T means the motor is stopped
+'     bState := (drv_state == DCS_STOPPED) ? true : false
+	add	objptr, ##788
+	rdlong	_var02, objptr
+	cmp	_var02, #1 wz
+ if_e	neg	result1, #1
+ if_ne	mov	result1, #0
+	sub	objptr, ##1795
+	cmp	result1, #0 wz
+ if_ne	not	_var03, #0
+	and	_var01, _var03
+	mov	result1, _var01
+_isp_steering_2wheel_isStopped_ret
+	ret
+
+' 
+' PUB isStarting() : bState
+_isp_steering_2wheel_isStarting
+' '' Return T/F where T means the either motor is spinning up
+'     bState := ltWheel.isStarting() or rtWheel.isStarting()
+	mov	_var01, #0
+' '' Return T/F where T means the motor is spinning up
+'     'bState := (drv_state == DCS_SPIN_UP or drv_state == DCS_AT_SPEED) ? true : false
+'     bState := (drv_state == DCS_SPIN_UP) ? true : false
+	add	objptr, ##1007
+	rdlong	_var02, objptr
+	cmp	_var02, #2 wz
+ if_e	neg	result1, #1
+ if_ne	mov	result1, #0
+	cmp	result1, #0 wz
+ if_ne	not	_var01, #0
+	mov	_var03, #0
+' '' Return T/F where T means the motor is spinning up
+'     'bState := (drv_state == DCS_SPIN_UP or drv_state == DCS_AT_SPEED) ? true : false
+'     bState := (drv_state == DCS_SPIN_UP) ? true : false
+	add	objptr, ##788
+	rdlong	_var02, objptr
+	cmp	_var02, #2 wz
+ if_e	neg	result1, #1
+ if_ne	mov	result1, #0
+	sub	objptr, ##1795
+	cmp	result1, #0 wz
+ if_ne	not	_var03, #0
+	or	_var01, _var03
+	mov	result1, _var01
+_isp_steering_2wheel_isStarting_ret
+	ret
+
+' 
+' PRI taskPostionSense() | senseStartTicks, eStopState
+_isp_steering_2wheel_taskPostionSense
+	mov	COUNT_, #27
+	call	#pushregs_
+' ' TASK: every 1/8 Sec (8Hz) read motor pos and calculate RPM and countOf90ths/Sec
+'     LAINIT()
+' 
+'     eStopState := false
+	mov	local01, #0
+'     ltWheel.resetWindowAccumulators()
+	add	objptr, #388
+	call	#_isp_bldc_motor_resetWindowAccumulators
+'     rtWheel.resetWindowAccumulators()
+	add	objptr, ##788
+	call	#_isp_bldc_motor_resetWindowAccumulators
+	sub	objptr, ##1176
+' 
+'     repeat
+LR__0050
+'         senseStartTicks := getct()
+	getct	local02
+' 
+'         ' Q: Do we want to reset both accum on a fault?
+'         ' if MOTOR FAULT or estop, reset our tracker
+'         if ltWheel.getDriverState() == DCS_FAULTED or  ltWheel.getDriverState() == DCS_ESTOP
+	mov	local03, #0
+	mov	local04, #0
+' '' Return Enum [DCS_*] value representing state of driver
+'     eDrvrState := drv_state
+	add	objptr, ##1007
+	rdlong	result1, objptr
+	cmp	result1, #6 wz
+ if_e	not	local04, #0
+	cmp	local04, #0 wz
+ if_ne	not	local03, #0
+	mov	local05, #0
+	mov	local06, #0
+' '' Return Enum [DCS_*] value representing state of driver
+'     eDrvrState := drv_state
+	sub	objptr, ##1007
+	cmp	result1, #7 wz
+ if_e	not	local06, #0
+	cmp	local06, #0 wz
+ if_ne	not	local05, #0
+	or	local03, local05 wz
+ if_e	jmp	#LR__0051
+'             ltWheel.resetWindowAccumulators()
+	add	objptr, #388
+	call	#_isp_bldc_motor_resetWindowAccumulators
+	sub	objptr, #388
+LR__0051
+' 
+'         if rtWheel.getDriverState() == DCS_FAULTED or  rtWheel.getDriverState() == DCS_ESTOP
+	mov	local03, #0
+	mov	local04, #0
+' '' Return Enum [DCS_*] value representing state of driver
+'     eDrvrState := drv_state
+	add	objptr, ##1795
+	rdlong	result1, objptr
+	cmp	result1, #6 wz
+ if_e	not	local04, #0
+	cmp	local04, #0 wz
+ if_ne	not	local03, #0
+	mov	local05, #0
+	mov	local06, #0
+' '' Return Enum [DCS_*] value representing state of driver
+'     eDrvrState := drv_state
+	sub	objptr, ##1795
+	cmp	result1, #7 wz
+ if_e	not	local06, #0
+	cmp	local06, #0 wz
+ if_ne	not	local05, #0
+	or	local03, local05 wz
+ if_e	jmp	#LR__0052
+'             rtWheel.resetWindowAccumulators()
+	add	objptr, ##1176
+	call	#_isp_bldc_motor_resetWindowAccumulators
+	sub	objptr, ##1176
+LR__0052
+' 
+'         showDriveStatesOnChange()
+'     reportDrvStatusOnChange()
+'     ltState, rtState := getDriverState()
+' ' Returns status of motor-driver state for each motor: enumerated constants: DCS_*
+'     eLeftState := ltWheel.getDriverState()
+' '' Return Enum [DCS_*] value representing state of driver
+'     eDrvrState := drv_state
+	add	objptr, ##1007
+	rdlong	local07, objptr
+'     eRightState := rtWheel.getDriverState()
+' '' Return Enum [DCS_*] value representing state of driver
+'     eDrvrState := drv_state
+	add	objptr, ##788
+	rdlong	local08, objptr
+	sub	objptr, ##1795
+'     if priorLtState <> ltState
+	add	ptr__isp_steering_2wheel_dat__, #164
+	rdlong	arg01, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #164
+	cmp	arg01, local07 wz
+ if_e	jmp	#LR__0053
+'         showDriverState(ltState, @"ltMot")
+	mov	arg02, ##@LR__0452
+	mov	arg01, local07
+	call	#_isp_steering_2wheel_showDriverState
+'         priorLtState := ltState
+	add	ptr__isp_steering_2wheel_dat__, #164
+	wrlong	local07, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #164
+LR__0053
+' 
+'     if priorRtState <> rtState
+	add	ptr__isp_steering_2wheel_dat__, #168
+	rdlong	local07, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #168
+	cmp	local07, local08 wz
+ if_e	jmp	#LR__0054
+'         showDriverState(rtState, @"rtMot")
+	mov	arg02, ##@LR__0453
+	mov	arg01, local08
+	call	#_isp_steering_2wheel_showDriverState
+'         priorRtState := rtState
+	add	ptr__isp_steering_2wheel_dat__, #168
+	wrlong	local08, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #168
+LR__0054
+'     reportMotorStatusOnChange()
+'     ltStatus, rtStatus := getStatus()
+' '' Returns status of motor drive state for each motor: enumerated constant: DS_MOVING, DS_HOLDING or DS_OFF
+'     eLeftStatus := ltWheel.getStatus()
+	add	objptr, #388
+	call	#_isp_bldc_motor_getStatus
+	mov	local09, result1
+'     eRightStatus := rtWheel.getStatus()
+	add	objptr, ##788
+	call	#_isp_bldc_motor_getStatus
+	sub	objptr, ##1176
+	mov	local10, result1
+	mov	result1, local09
+	mov	local11, result1
+'     if priorLtStatus <> ltStatus
+	add	ptr__isp_steering_2wheel_dat__, #156
+	rdlong	arg01, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #156
+	cmp	arg01, local11 wz
+ if_e	jmp	#LR__0055
+'         showStatus(ltStatus, @"ltMot")
+	mov	arg02, ##@LR__0454
+	mov	arg01, local11
+	call	#_isp_steering_2wheel_showStatus
+'         priorLtStatus := ltStatus
+	add	ptr__isp_steering_2wheel_dat__, #156
+	wrlong	local11, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #156
+LR__0055
+' 
+'     if priorRtStatus <> rtStatus
+	add	ptr__isp_steering_2wheel_dat__, #160
+	rdlong	local11, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #160
+	cmp	local11, local10 wz
+ if_e	jmp	#LR__0056
+'         showStatus(rtStatus, @"rtMot")
+	mov	arg02, ##@LR__0455
+	mov	arg01, local10
+	call	#_isp_steering_2wheel_showStatus
+'         priorRtStatus := rtStatus
+	add	ptr__isp_steering_2wheel_dat__, #160
+	wrlong	local10, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #160
+LR__0056
+'     reportMotorFaultOnChange()
+'     bLeftStatus, bRightStatus := getFaultStatus()
+' ' Returns status of motor-driver fault-state for each motor: T/F
+'     bLeftStatus := ltWheel.isFaulted()
+' '' Return T/F where T means the motor has faulted
+'     bState := (drv_state == DCS_FAULTED) ? true : false
+	add	objptr, ##1007
+	rdlong	result2, objptr
+	cmp	result2, #6 wz
+ if_e	neg	result1, #1
+ if_ne	mov	result1, #0
+	mov	local12, result1
+'     bRightStatus := rtWheel.isFaulted()
+' '' Return T/F where T means the motor has faulted
+'     bState := (drv_state == DCS_FAULTED) ? true : false
+	add	objptr, ##788
+	rdlong	result2, objptr
+	cmp	result2, #6 wz
+ if_e	neg	result1, #1
+ if_ne	mov	result1, #0
+	mov	local13, result1
+' 
+'     bLeftSignal := ltWheel.isFaultSignal()
+' '' Return T/F where T means the motor has faulted
+'     bState := (fault <> false) ? true : false
+	sub	objptr, ##784
+	rdlong	result2, objptr wz
+ if_ne	neg	result1, #1
+ if_e	mov	result1, #0
+	mov	local14, result1
+'     bRightSignal := rtWheel.isFaultSignal()
+' '' Return T/F where T means the motor has faulted
+'     bState := (fault <> false) ? true : false
+	add	objptr, ##788
+	rdlong	result2, objptr wz
+ if_ne	neg	result1, #1
+ if_e	mov	result1, #0
+	sub	objptr, ##1799
+	mov	local15, result1
+' 
+'     ' if fault appears then let it stay for 3*1000 mSec
+'     ' . after that, clear it
+' 
+'     if bLeftSignal == TRUE and ltFaultSeenMS == 0
+	cmp	local14, ##-1 wz
+ if_e	rdlong	local16, ptr__isp_steering_2wheel_dat__ wz
+ if_ne	jmp	#LR__0057
+'         ltFaultSeenMS := getms() + 3000
+	call	#__system___getms
+	add	result1, ##3000 wz
+	wrlong	result1, ptr__isp_steering_2wheel_dat__
+'         if ltFaultSeenMS == 0                                                   ' just in case happens to add to 0
+'           ltFaultSeenMS := 1
+ if_e	wrlong	#1, ptr__isp_steering_2wheel_dat__
+	brk	#22
+	jmp	#LR__0060
+LR__0057
+'     elseif bLeftSignal == TRUE and ltFaultSeenMS <> 0 and getms() > ltFaultSeenMS
+	mov	local16, #0
+	mov	local17, #0
+	cmp	local14, ##-1 wz
+ if_ne	jmp	#LR__0058
+	rdlong	local14, ptr__isp_steering_2wheel_dat__ wz
+ if_ne	neg	local17, #1
+LR__0058
+	cmp	local17, #0 wz
+ if_ne	not	local16, local16
+	mov	local18, #0
+	mov	local19, #0
+	call	#__system___getms
+	mov	local20, result1
+	rdlong	local17, ptr__isp_steering_2wheel_dat__
+	cmps	local20, local17 wcz
+ if_a	not	local19, #0
+	cmp	local19, #0 wz
+ if_ne	not	local18, #0
+	test	local16, local18 wz
+ if_e	jmp	#LR__0059
+	brk	#23
+'         ltWheel.clearFaultSignal()
+	add	objptr, #388
+	call	#_isp_bldc_motor_clearFaultSignal
+	sub	objptr, #388
+'         ltFaultSeenMS := 0
+	wrlong	#0, ptr__isp_steering_2wheel_dat__
+LR__0059
+LR__0060
+' 
+'     if bRightSignal == TRUE and rtFaultSeenMS == 0
+	cmp	local15, ##-1 wz
+ if_ne	jmp	#LR__0061
+	add	ptr__isp_steering_2wheel_dat__, #4
+	rdlong	local16, ptr__isp_steering_2wheel_dat__ wz
+	sub	ptr__isp_steering_2wheel_dat__, #4
+ if_ne	jmp	#LR__0061
+'         rtFaultSeenMS := getms() + 3000
+	call	#__system___getms
+	add	result1, ##3000 wz
+	add	ptr__isp_steering_2wheel_dat__, #4
+	wrlong	result1, ptr__isp_steering_2wheel_dat__
+'         if rtFaultSeenMS == 0                                                   ' just in case happens to add to 0
+	sub	ptr__isp_steering_2wheel_dat__, #4
+'           rtFaultSeenMS := 1
+ if_e	add	ptr__isp_steering_2wheel_dat__, #4
+ if_e	wrlong	#1, ptr__isp_steering_2wheel_dat__
+ if_e	sub	ptr__isp_steering_2wheel_dat__, #4
+	brk	#24
+	jmp	#LR__0064
+LR__0061
+'     elseif bRightSignal == TRUE and rtFaultSeenMS <> 0 and getms() > rtFaultSeenMS
+	mov	local16, #0
+	mov	local17, #0
+	cmp	local15, ##-1 wz
+ if_ne	jmp	#LR__0062
+	add	ptr__isp_steering_2wheel_dat__, #4
+	rdlong	local20, ptr__isp_steering_2wheel_dat__ wz
+	sub	ptr__isp_steering_2wheel_dat__, #4
+ if_ne	neg	local17, #1
+LR__0062
+	cmp	local17, #0 wz
+ if_ne	not	local16, local16
+	mov	local19, #0
+	mov	local20, #0
+	call	#__system___getms
+	mov	local21, result1
+	add	ptr__isp_steering_2wheel_dat__, #4
+	rdlong	local22, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #4
+	cmps	local21, local22 wcz
+ if_a	not	local20, #0
+	cmp	local20, #0 wz
+ if_ne	not	local19, #0
+	test	local16, local19 wz
+ if_e	jmp	#LR__0063
+	brk	#25
+'         rtWheel.clearFaultSignal()
+	add	objptr, ##1176
+	call	#_isp_bldc_motor_clearFaultSignal
+	sub	objptr, ##1176
+'         rtFaultSeenMS := 0
+	add	ptr__isp_steering_2wheel_dat__, #4
+	wrlong	#0, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #4
+LR__0063
+LR__0064
+	mov	local23, local12
+	mov	local24, local13
+'     if priorLtFault <> bLeftStatus
+	add	ptr__isp_steering_2wheel_dat__, #172
+	rdlong	arg03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #172
+	cmp	arg03, local23 wz
+ if_e	jmp	#LR__0065
+'         showFaultStatus(bLeftStatus, @"ltMot", true)       ' force output
+	mov	arg02, ##@LR__0456
+	mov	arg01, local23
+	neg	arg03, #1
+	call	#_isp_steering_2wheel_showFaultStatus
+'         priorLtFault := bLeftStatus
+	add	ptr__isp_steering_2wheel_dat__, #172
+	wrlong	local23, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #172
+LR__0065
+' 
+'     if priorRtFault <> bRightStatus
+	add	ptr__isp_steering_2wheel_dat__, #176
+	rdlong	local23, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #176
+	cmp	local23, local24 wz
+ if_e	jmp	#LR__0066
+'         showFaultStatus(bRightStatus, @"rtMot", true)
+	mov	arg02, ##@LR__0457
+	mov	arg01, local24
+	neg	arg03, #1
+	call	#_isp_steering_2wheel_showFaultStatus
+'         priorRtFault := bRightStatus
+	add	ptr__isp_steering_2wheel_dat__, #176
+	wrlong	local24, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #176
+LR__0066
+' 
+'         LALOOPSTART()
+' 
+'         ' PROCESS left/right motor
+'         updateWindowAccumulators()
+'     ltWheel.updateWindowAccumulators()
+	add	objptr, #388
+	call	#_isp_bldc_motor_updateWindowAccumulators
+'     rtWheel.updateWindowAccumulators()
+	add	objptr, ##788
+	call	#_isp_bldc_motor_updateWindowAccumulators
+' 
+'         ' if user set time/distance to stop then stop if we are past the time or distance
+'         ' if both time and distance is used, first check until time is passed and then check distance
+'         if motorStopMSecs > 0 and (getms() > motorStopMSecs)
+	mov	local03, #0
+	mov	local04, #0
+	sub	objptr, ##888
+	rdlong	local06, objptr
+	sub	objptr, #288
+	cmps	local06, #1 wc
+ if_ae	neg	local04, #1
+	cmp	local04, #0 wz
+ if_ne	not	local03, #0
+	mov	local06, #0
+	mov	local05, #0
+	call	#__system___getms
+	mov	arg01, result1
+	add	objptr, #288
+	rdlong	local25, objptr
+	sub	objptr, #288
+	cmps	arg01, local25 wcz
+ if_a	not	local05, #0
+	cmp	local05, #0 wz
+ if_ne	not	local06, #0
+	test	local03, local06 wz
+ if_e	jmp	#LR__0067
+'             stopMotors()
+	call	#_isp_steering_2wheel_stopMotors
+'             motorStopMSecs := 0 ' and clear user request
+	add	objptr, #288
+	wrlong	#0, objptr
+	sub	objptr, #288
+	jmp	#LR__0070
+LR__0067
+'         elseif motorStopHallTicks > 0
+	add	objptr, #284
+	rdlong	local03, objptr
+	sub	objptr, #284
+	cmps	local03, #1 wc
+ if_b	jmp	#LR__0069
+'             'debug(" taskPostionSense: ", udec(motorStopHallTicks), " ", udec(ltWheel.getposTrkHallTicks()), " ", udec(rtWheel.getposTrkHallTicks()))
+'             if (ltWheel.getposTrkHallTicks() > motorStopHallTicks or rtWheel.getposTrkHallTicks() > motorStopHallTicks)
+	mov	local03, #0
+	mov	local04, #0
+' '' INTERNAL USE: return our position tracking hall-ticks
+'     retv := posTrkHallTicks
+	add	objptr, ##1015
+	rdlong	local25, objptr
+	sub	objptr, ##731
+	rdlong	arg01, objptr
+	cmps	local25, arg01 wcz
+ if_a	not	local04, #0
+	cmp	local04, #0 wz
+ if_ne	not	local03, #0
+	mov	local05, #0
+	mov	local26, #0
+' '' INTERNAL USE: return our position tracking hall-ticks
+'     retv := posTrkHallTicks
+	add	objptr, ##1519
+	rdlong	local25, objptr
+	sub	objptr, ##1803
+	cmps	local25, arg01 wcz
+ if_a	not	local26, #0
+	cmp	local26, #0 wz
+ if_ne	not	local05, #0
+	or	local03, local05 wz
+ if_e	jmp	#LR__0068
+'                 stopMotors()
+	call	#_isp_steering_2wheel_stopMotors
+'                 motorStopHallTicks := 0 ' and clear user request
+	add	objptr, #284
+	wrlong	#0, objptr
+	sub	objptr, #284
+LR__0068
+LR__0069
+LR__0070
+' 
+'         LALOOPEND()
+'         ' ------------------------------------------
+'         ' iff driver reports e-stop then clear the emergency stop request
+'         '  user will request it again if needed
+'         ' NOTE: we leave e_stop set for at least 1/4 second before clearing!
+'         if isEmergency()
+' ' return T/F where T means one or both wheels are in emergency cutoff state
+'     bEmergencyState := ltWheel.isEmergency()
+' '' Return T/F where T means the motor is emergency-stopped
+'     bState := (drv_state == DCS_ESTOP) ? true : false
+	add	objptr, ##1007
+	rdlong	local27, objptr
+	cmp	local27, #7 wz
+ if_e	neg	result1, #1
+ if_ne	mov	result1, #0
+	sub	objptr, ##1007
+	mov	local06, result1 wz
+'     if not bEmergencyState
+ if_ne	jmp	#LR__0071
+'         bEmergencyState := rtWheel.isEmergency()
+' '' Return T/F where T means the motor is emergency-stopped
+'     bState := (drv_state == DCS_ESTOP) ? true : false
+	add	objptr, ##1795
+	rdlong	local27, objptr
+	cmp	local27, #7 wz
+ if_e	neg	result1, #1
+ if_ne	mov	result1, #0
+	sub	objptr, ##1795
+	mov	local06, result1
+LR__0071
+'     if bEmergencyState
+	cmp	local06, #0 wz
+ if_e	jmp	#LR__0072
+	brk	#27
+LR__0072
+	cmp	local06, #0 wz
+ if_e	jmp	#LR__0074
+'             if eStopState == true
+	cmp	local01, ##-1 wz
+'                 clearEmergency()
+ if_ne	jmp	#LR__0073
+' '' Remove emergency override allowing motors to be driven again
+' ' used by wheels*.spin2 methods
+'     userCutoff := FALSE
+	add	objptr, #308
+	wrlong	#0, objptr
+'     ltWheel.clearEmergency()
+' '' Clear EMERGENCY-Stop - remove the need to stop!
+'     e_stop := FALSE
+	add	objptr, ##847
+	wrlong	#0, objptr
+	brk	#41
+'     rtWheel.clearEmergency()
+' '' Clear EMERGENCY-Stop - remove the need to stop!
+'     e_stop := FALSE
+	add	objptr, ##788
+	wrlong	#0, objptr
+	brk	#41
+	sub	objptr, ##1943
+	brk	#21
+LR__0073
+'             !!= eStopState                                                      ' toggle stop flag
+	mov	local03, #0
+	cmp	local01, #0 wz
+ if_e	neg	local03, #1
+	mov	local01, local03
+LR__0074
+' 
+'         ' keep track of runtime for this sensor loop (for debug, HDMI, etc.)
+'         deltaTicks := getct() - senseStartTicks
+	getct	result1
+	sub	result1, local02
+	add	objptr, #272
+	wrlong	result1, objptr
+	sub	objptr, #264
+	rdlong	local25, objptr
+	sub	objptr, #8
+' 
+'         ' code uses about 1_880 ticks. This is little over 9 uS  @200MHz clock
+'         '   wait remainder of 125 mSec before next sample
+'         waitct(senseStartTicks + ticks125ms)    ' wait to create "sense" time-base
+	addct1	local02, local25
+	waitct1
+	jmp	#LR__0050
+	mov	ptra, fp
+	call	#popregs_
+_isp_steering_2wheel_taskPostionSense_ret
+	ret
+
+' 
+' 
+' PRI showDriverState(eState, pMsg)
+_isp_steering_2wheel_showDriverState
+	mov	COUNT_, #3
+	call	#pushregs_
+	mov	local01, arg01
+	mov	local02, arg02
+'     case eState
+	mov	local03, local01
+	fle	local03, #8
+	jmprel	local03
+LR__0080
+	jmp	#LR__0081
+	jmp	#LR__0082
+	jmp	#LR__0083
+	jmp	#LR__0084
+	jmp	#LR__0085
+	jmp	#LR__0086
+	jmp	#LR__0087
+	jmp	#LR__0088
+	jmp	#LR__0089
+LR__0081
+'         DCS_Unknown:
+'             pStatVal := @dcsUnknown
+	add	ptr__isp_steering_2wheel_dat__, #48
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #104
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	jmp	#LR__0090
+LR__0082
+'         DCS_STOPPED:
+'             pStatVal := @dcsSTOPPED
+	add	ptr__isp_steering_2wheel_dat__, #55
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #97
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	jmp	#LR__0090
+LR__0083
+'         DCS_SPIN_UP:
+'             pStatVal := @dcsSPIN_UP
+	add	ptr__isp_steering_2wheel_dat__, #66
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #86
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	jmp	#LR__0090
+LR__0084
+'         DCS_AT_SPEED:
+'             pStatVal := @dcsAT_SPEED
+	add	ptr__isp_steering_2wheel_dat__, #77
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #75
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	jmp	#LR__0090
+LR__0085
+'         DCS_SPIN_DN:
+'             pStatVal := @dcsSPIN_DN
+	add	ptr__isp_steering_2wheel_dat__, #89
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #63
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	jmp	#LR__0090
+LR__0086
+'         DCS_SLOW_TO_CHG:
+'             pStatVal := @dcsSLOW_TO_CHG
+	add	ptr__isp_steering_2wheel_dat__, #100
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #52
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	jmp	#LR__0090
+LR__0087
+'         DCS_FAULTED:
+'             pStatVal := @dcsFAULTED
+	add	ptr__isp_steering_2wheel_dat__, #115
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #37
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	jmp	#LR__0090
+LR__0088
+'         DCS_ESTOP:
+'             pStatVal := @dcsESTOP
+	add	ptr__isp_steering_2wheel_dat__, #126
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #26
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	jmp	#LR__0090
+LR__0089
+'         other:
+'             placeAsciiDigits(@dcsOtherVal, eState)
+	mov	arg01, ptr__isp_steering_2wheel_dat__
+	add	arg01, #141
+	mov	arg02, local01
+	call	#_isp_steering_2wheel_placeAsciiDigits
+'             pStatVal := @dcsOther
+	add	ptr__isp_steering_2wheel_dat__, #135
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #17
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+LR__0090
+	mov	0-0, local02
+	add	ptr__isp_steering_2wheel_dat__, #152
+	rdlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	mov	1-0, local03
+	brk	#28
+	mov	ptra, fp
+	call	#popregs_
+_isp_steering_2wheel_showDriverState_ret
+	ret
+
+' 
+' PRI showStatus(eStatus, pMsg)
+_isp_steering_2wheel_showStatus
+	mov	COUNT_, #3
+	call	#pushregs_
+	mov	local01, arg01
+	mov	local02, arg02
+'     case eStatus
+	mov	local03, local01
+	sub	local03, #10
+	fle	local03, #4
+	jmprel	local03
+LR__0100
+	jmp	#LR__0101
+	jmp	#LR__0102
+	jmp	#LR__0103
+	jmp	#LR__0104
+	jmp	#LR__0105
+LR__0101
+'         DS_Unknown:
+'             pStatVal := @dsUnknown
+	add	ptr__isp_steering_2wheel_dat__, #8
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #144
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	jmp	#LR__0106
+LR__0102
+'         DS_MOVING:
+'             pStatVal := @dsMOVING
+	add	ptr__isp_steering_2wheel_dat__, #14
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #138
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	jmp	#LR__0106
+LR__0103
+'         DS_HOLDING:
+'             pStatVal := @dsHOLDING
+	add	ptr__isp_steering_2wheel_dat__, #20
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #132
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	jmp	#LR__0106
+LR__0104
+'         DS_OFF:
+'             pStatVal := @dsOFF
+	add	ptr__isp_steering_2wheel_dat__, #26
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #126
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	jmp	#LR__0106
+LR__0105
+'         other:
+'             placeAsciiDigits(@dsOtherVal, eStatus)
+	mov	arg01, ptr__isp_steering_2wheel_dat__
+	add	arg01, #37
+	mov	arg02, local01
+	call	#_isp_steering_2wheel_placeAsciiDigits
+'             pStatVal := @dsOther
+	add	ptr__isp_steering_2wheel_dat__, #32
+	mov	local03, ptr__isp_steering_2wheel_dat__
+	add	ptr__isp_steering_2wheel_dat__, #120
+	wrlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+LR__0106
+	mov	0-0, local02
+	add	ptr__isp_steering_2wheel_dat__, #152
+	rdlong	local03, ptr__isp_steering_2wheel_dat__
+	sub	ptr__isp_steering_2wheel_dat__, #152
+	mov	1-0, local03
+	brk	#29
+	mov	ptra, fp
+	call	#popregs_
+_isp_steering_2wheel_showStatus_ret
+	ret
+
+' 
+' PRI showFaultStatus(bStatus, pMsg, bForceOutput)
+_isp_steering_2wheel_showFaultStatus
+'     if bStatus == true
+	cmp	arg01, ##-1 wz
+ if_ne	jmp	#LR__0110
+	mov	0-0, arg02
+	brk	#30
+	jmp	#LR__0112
+LR__0110
+'     elseif bStatus == false and bForceOutput == true
+	cmp	arg01, #0 wz
+ if_e	cmp	arg03, ##-1 wz
+ if_ne	jmp	#LR__0111
+	mov	0-0, arg02
+	brk	#31
+LR__0111
+LR__0112
+_isp_steering_2wheel_showFaultStatus_ret
+	ret
+
+' 
+' PRI placeAsciiDigits(pStrBytes, byt) | hiNyb, lowNyb
+_isp_steering_2wheel_placeAsciiDigits
+	getnib	_var01, arg02, #0
+	add	_var01, #48
+'         hiNyb := byt & $f0 >> 4 + $30
+'         if hiNyb > $39
+	cmps	_var01, #58 wc
+'             hiNyb += 7
+ if_ae	add	_var01, #7
+	getnib	arg02, arg02, #0
+	add	arg02, #48
+'         lowNyb := byt & $0f      + $30
+'         if lowNyb > $39
+	cmps	arg02, #58 wc
+'             lowNyb += 7
+ if_ae	add	arg02, #7
+'         BYTE [pStrBytes][0] := hiNyb
+	wrbyte	_var01, arg01
+'         BYTE [pStrBytes][1] := lowNyb
+	add	arg01, #1
+	wrbyte	arg02, arg01
+_isp_steering_2wheel_placeAsciiDigits_ret
+	ret
+
+' 
+' PUB startEx(eMotorBasePin, eMotorVoltage, eDetectionMode, sync) : ok | legalBase
+_isp_bldc_motor_startEx
+' '' Specify motor control board connect location for this motor and start the driver, specify sync setting
+' 
+'     sync_required := sync
+	add	ptr__isp_bldc_motor_dat__, ##1800
+	wrlong	arg04, ptr__isp_bldc_motor_dat__
+	sub	ptr__isp_bldc_motor_dat__, ##1800
+'     init(eMotorBasePin, eMotorVoltage, eDetectionMode)  ' setup runtime constants
+	call	#_isp_bldc_motor_init
+	add	objptr, ##727
+	mov	arg03, objptr
+'     params_ptr := @offset_fwd   ' point to driver variables
+	sub	objptr, #172
+	wrlong	arg03, objptr
+	sub	objptr, ##555
+'     setTargetAccel(0, false)                            ' do NOT move at startup
+	mov	arg01, #0
+	mov	arg02, #0
+	call	#_isp_bldc_motor_setTargetAccel
+' 
+'     ok := motorCog := coginit(NEWCOG, @driver, @pinbase) + 1
+	mov	arg02, ptr__isp_bldc_motor_dat__
+	add	arg02, #448
+	mov	arg03, objptr
+	add	arg03, ##551
+	mov	result1, #16
+	setq	arg03
+	coginit	result1, arg02 wc
+ if_b	neg	result1, #1
+	add	result1, #1
+	mov	arg03, result1 wz
+	add	objptr, ##535
+	wrlong	arg03, objptr
+'     if motorCog == 0    ' did fail?
+	sub	objptr, ##535
+ if_ne	jmp	#LR__0120
+	brk	#32
+	jmp	#LR__0121
+LR__0120
+'     else
+	add	objptr, ##535
+	rdlong	result1, objptr
+	sub	objptr, ##535
+	sub	result1, #1
+	mov	0-0, result1
+	brk	#33
+LR__0121
+	mov	result1, arg03
+_isp_bldc_motor_startEx_ret
+	ret
+
+' 
+' PUB stop()
+_isp_bldc_motor_stop
+' '' Stop cogs and release pins assigned to this motor
+' 
+'     if motorCog     ' stop motor drive
+	add	objptr, ##535
+	rdlong	arg01, objptr wz
+	sub	objptr, ##535
+ if_ne	sub	arg01, #1
+'         cogstop(motorCog - 1)
+ if_ne	cogstop	arg01
+'         motorCog := 0
+ if_ne	add	objptr, ##535
+ if_ne	wrlong	#0, objptr
+ if_ne	sub	objptr, ##535
+' 
+'     if senseCog     ' stop motor reads
+	add	objptr, ##539
+	rdlong	arg01, objptr wz
+	sub	objptr, ##539
+ if_ne	sub	arg01, #1
+'         cogstop(senseCog - 1)
+ if_ne	cogstop	arg01
+'         senseCog := 0
+ if_ne	add	objptr, ##539
+ if_ne	wrlong	#0, objptr
+ if_ne	sub	objptr, ##539
+' 
+'     ' Bottom 8 pins are sensed, top 8 are driven, so clear only the top 8
+'     if pinbase <> VALUE_NOT_SET
+	add	objptr, ##551
+	rdlong	arg01, objptr
+	sub	objptr, ##551
+	cmp	arg01, ##-1 wz
+ if_e	jmp	#LR__0130
+	add	arg01, #8
+	or	arg01, #448
+'         pinclear(pinbase+8 addpins 7)
+	fltl	arg01
+	wrpin	#0, arg01
+'         pinbase := VALUE_NOT_SET
+	add	objptr, ##551
+	wrlong	##-1, objptr
+	sub	objptr, ##551
+LR__0130
+_isp_bldc_motor_stop_ret
+	ret
+
+' 
+' PRI validatePinBase(eMotorBasePin) : legalBase
+_isp_bldc_motor_validatePinBase
+	mov	COUNT_, #2
+	call	#pushregs_
+	mov	local01, arg01
+' 
+'   legalBase := VALUE_NOT_SET
+	neg	local02, #1
+'   if lookdown(eMotorBasePin: PINS_P0_P15, PINS_P8_P23, PINS_P16_P31, PINS_P32_P47, PINS_P40_P55) <> 0
+	mov	arg03, ptr__isp_bldc_motor_dat__
+	add	arg03, ##1944
+	mov	arg01, local01
+	mov	arg02, #1
+	mov	arg04, #5
+	call	#__system___lookdown
+	cmp	result1, #0 wz
+'     legalBase := eMotorBasePin
+ if_ne	mov	local02, local01
+	mov	result1, local02
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_validatePinBase_ret
+	ret
+
+' 
+' PRI init(eMotorBasePin, eMotorVoltage, eDetectionMode) | fwdDegrees, revDegrees, gapInMS
+_isp_bldc_motor_init
+	mov	COUNT_, #2
+	call	#pushregs_
+	rdlong	muldivb_, #20
+	abs	muldivb_, muldivb_ wc
+	qdiv	muldivb_, ##1000
+	mov	local01, arg03
+	getqx	muldivb_
+	negc	muldivb_, muldivb_
+	wrlong	muldivb_, ptr__isp_bldc_motor_dat__
+	rdlong	muldiva_, #20
+	abs	muldiva_, muldiva_ wc
+	qdiv	muldiva_, ##1000000
+' '' Specify motor control board connect location for this motor BUT DON'T start the driver
+'     ticks1ms   := (CLKFREQ / 1_000)
+	getqx	muldiva_
+	qmul	muldivb_, #500
+	negc	muldiva_, muldiva_
+'     ticks1us   := (CLKFREQ / 1_000_000)
+	add	ptr__isp_bldc_motor_dat__, #4
+	wrlong	muldiva_, ptr__isp_bldc_motor_dat__
+	getqx	muldiva_
+	abs	muldiva_, muldiva_ wc
+	qdiv	muldiva_, ##1000
+	getqx	muldiva_
+	qmul	muldivb_, #125
+	negc	muldivb_, muldiva_
+'     ticks500us := (ticks1ms * 500) / 1_000  ' phrased this way for better result
+	add	ptr__isp_bldc_motor_dat__, #4
+	wrlong	muldivb_, ptr__isp_bldc_motor_dat__
+'     ticks125ms := ticks1ms * 125
+	add	ptr__isp_bldc_motor_dat__, #4
+' 
+'     ' set up debug variables
+'     useDebug := FALSE
+	add	objptr, #60
+'     showHDMIDebug := FALSE
+'     pinbase := validatePinBase(eMotorBasePin)           ' record base pin number
+	getqx	muldivb_
+	wrlong	muldivb_, ptr__isp_bldc_motor_dat__
+	sub	ptr__isp_bldc_motor_dat__, #12
+	wrlong	#0, objptr
+	add	objptr, #4
+	wrlong	#0, objptr
+	sub	objptr, #64
+	call	#_isp_bldc_motor_validatePinBase
+	add	objptr, ##551
+	wrlong	result1, objptr
+	sub	objptr, ##551
+' 
+'     eUserDetectionMode, bUserForced := getInternalDetectMode(eDetectionMode)
+	mov	arg01, local01
+	call	#_isp_bldc_motor_getInternalDetectMode
+	mov	local01, result1
+	mov	muldivb_, result2
+	add	objptr, #8
+	wrlong	local01, objptr
+	add	objptr, #8
+	wrlong	muldivb_, objptr
+	sub	objptr, #16
+' 
+'     ' set the mode now used by the driver to condition things (current-sense scaling, etc.)
+' 
+'     eDetectedBoard := getBoardType()
+	call	#_isp_bldc_motor_getBoardType
+	add	objptr, #12
+	wrlong	result1, objptr
+' 
+'     bResetSenseData := FALSE
+	add	objptr, #467
+	wrlong	#0, objptr
+	sub	objptr, #399
+' 
+'     byte[@motorId] := 0 ' terminate an empty string
+	wrbyte	#0, objptr
+' 
+'     targetAngle := $FFFFFFFF    ' set to not used! (other values only used during testing)
+	add	objptr, #479
+	wrlong	##-1, objptr
+' 
+'     degrPerTic, hallTicsPerRotation := hallTicInfoForMotor()
+' '' Return numbers for user selected motor (for use by two-wheel-steering object!)
+'     if user.MOTOR_TYPE == user.MOTR_DOCO_4KRPM
+'         ' degrees = ticks * 4
+'         degreesPerTic := 4
+'         ' rotations = ticks / 90
+'         ticsPerRotation := 90
+	sub	objptr, #491
+	wrlong	#4, objptr
+	add	objptr, #4
+	wrlong	#90, objptr
+	sub	objptr, #72
+' 
+'     fwdDegrees, revDegrees := offsetsForMotor(user.MOTOR_TYPE)
+	mov	arg01, #0
+	call	#_isp_bldc_motor_offsetsForMotor
+	mov	local01, result1
+'     offset_fwd  := fwdDegrees frac 360
+	mov	arg03, #360
+	mov	arg02, #0
+	setq	local01
+	qdiv	arg02, arg03
+	add	objptr, ##727
+'     offset_rev  := revDegrees frac 360
+	getqx	result1
+	wrlong	result1, objptr
+	setq	result2
+	qdiv	arg02, arg03
+	add	objptr, #4
+	getqx	arg02
+	wrlong	arg02, objptr
+	mov	0-0, local01
+	mov	1-0, result1
+	brk	#34
+	mov	0-0, result2
+	sub	objptr, ##731
+	mov	1-0, arg02
+	brk	#35
+' 
+'     ' new build up our hall angle and position increment table for specific motor
+'     if user.MOTOR_TYPE == MOTR_6_5_INCH
+	add	ptr__isp_bldc_motor_dat__, ##1880
+	mov	arg01, ptr__isp_bldc_motor_dat__
+	sub	ptr__isp_bldc_motor_dat__, ##1562
+	mov	arg02, ptr__isp_bldc_motor_dat__
+	sub	ptr__isp_bldc_motor_dat__, #318
+'         longmove(@hall_angles, @hltbAngles, 16)
+	mov	arg03, #16
+	call	#__system__longmove
+	add	ptr__isp_bldc_motor_dat__, ##1816
+	mov	arg01, ptr__isp_bldc_motor_dat__
+	sub	ptr__isp_bldc_motor_dat__, ##1626
+	mov	arg02, ptr__isp_bldc_motor_dat__
+	sub	ptr__isp_bldc_motor_dat__, #190
+'         bytemove(@deltas, @deltas65, 64)
+	mov	arg03, #64
+	call	#__system____builtin_memmove
+	add	ptr__isp_bldc_motor_dat__, #4
+	rdlong	local01, ptr__isp_bldc_motor_dat__
+	qmul	local01, ##22727
+	getqx	local01
+	abs	local01, local01 wc
+	qdiv	local01, ##1000
+' 
+' ' average is middle plus deflection for forward or reverse
+' '  responsiveness of motor to desire
+' '  middle value is angular diff and motor postion relative to hall position
+' '  deflection is direction and speed dependent
+'     frame_cnt := (ticks1us * (1_000_000_000 / PWM_RATE_IN_HZ)) / 1_000
+	add	objptr, ##783
+	getqx	local01
+	negc	local01, local01
+	wrlong	local01, objptr
+	mov	0-0, local01
+	brk	#36
+	add	ptr__isp_bldc_motor_dat__, ##1772
+	wrlong	local01, ptr__isp_bldc_motor_dat__
+	rdlong	local01, objptr
+	abs	local01, local01 wc
+	shr	local01, #1
+	negc	local01, local01
+	shl	local01, #16
+	add	local01, #1
+	add	ptr__isp_bldc_motor_dat__, #4
+	wrlong	local01, ptr__isp_bldc_motor_dat__
+	rdlong	local01, objptr
+	abs	local01, local01 wc
+	shr	local01, #2
+	negc	local01, local01
+	add	ptr__isp_bldc_motor_dat__, #4
+	wrlong	local01, ptr__isp_bldc_motor_dat__
+	sub	ptr__isp_bldc_motor_dat__, #8
+	rdlong	local01, ptr__isp_bldc_motor_dat__
+	qmul	local01, ##3300
+' 
+'     ' preload driver values before driver start
+'     adc_fram    :=    frame_cnt                         ' set ADC to full PWM frame counts
+'     fram        :=    (frame_cnt / 2) << 16 + 1         ' PWM frame: width=FRAME/2, div sysclk by 1 (no division)
+'     bias        :=    frame_cnt / 4                     ' PWM center-frame bias
+	add	ptr__isp_bldc_motor_dat__, #16
+	sub	objptr, ##771
+	getqx	local01
+	wrlong	local01, ptr__isp_bldc_motor_dat__
+	rdlong	local01, objptr
+	cmp	local01, #32 wz
+ if_e	mov	local02, #52
+ if_ne	mov	local02, #260
+	sub	ptr__isp_bldc_motor_dat__, ##1788
+	rdlong	local01, ptr__isp_bldc_motor_dat__
+	qmul	local01, local02
+'     numerator   :=    3300 * adc_fram                   ' calculate the adc scaling based off the adc_fram count
+' 
+'     ' setup driver parameters based on clock rate
+'     if eDetectedBoard == BRD_REV_B
+'         gapInMS:= 52
+'     else
+'         gapInMS:= 260
+	getqx	local02
+	abs	local02, local02 wc
+	qdiv	local02, ##1000
+'     dead_gap    := (ticks1us * gapInMS) / 1_000 ' (was OFFSET) 260 of these made into "value nS"
+	add	objptr, ##739
+'     pwm_limit   := (frame_cnt / 2) - (dead_gap  / 2)    'PWM duty hard limit 1/2 freq of PWM
+	mov	local02, ##1600
+' 
+'     ' .. and set up rest
+'     ' orig higher power code used this
+'     duty_min    := 100 << 4 #> (dead_gap / 2) << 4
+'                                                         '    duty_min    := dead_gap << 4 #> dead_gap << 4
+'                                                         ' Chip's new code adjusted this, why?
+'                                                         '    duty_min    := 200 << 4 #> dead_gap << 4
+'     duty_max    := (pwm_limit  << 4) / 2 <# pwm_limit << 4      ' ok
+'                                                         'duty_max    := ((pwm_limit  << 4) / 4) * 3 <# pwm_limit << 4    ' BAD
+'                                                         'duty_max    := ((pwm_limit  << 4) / 8) * 5 <# pwm_limit << 4    ' BAD
+'     ' orig higher power code used this
+'     duty_up     := 18
+'     duty_dn     := 4
+'                                                         ' Chip's new code adjusted this, why?
+'                                                         '    duty_up     := 8   ' this drops our top-end power by 45%
+'                                                         '    duty_dn     := 2
+'     cfg_ctcks   := ticks500us                           ' drive control loop period
+	add	ptr__isp_bldc_motor_dat__, #4
+'     stop_mode   := SM_FLOAT                             ' enum: [SM_FLOAT, SM_BRAKE]
+'     e_stop      := FALSE
+'     ' NOTES: 220410 -  at 18.5v 50_000 seems to fault a lot on gravel surface (i'm switching) to 40_000 and PWR_14p8V to see if motors stay operational
+'     ' NOTES: 220410 -  at 14.8V 40_000 seems to fault a lot on gravel surface (i'm switching) to 10_000 and PWR_14p8V to see if motors stay operational (5_000 dog slow)
+'     ' NOTES: 220413 -  at 14.8V 10_000 better on gravel surface  but too slow a ramp to 15_000 and PWR_14p8V to see if motors stay operational
+'     ' 50_000 for 12v & 18_5v
+'     '   ramp_min - start ramping at this value
+'     '   ramp_max - max ramping at this value, once reach this value, keep incrementing with this value
+'     '   ramp_inc - ramping increment, added to ramp_min every 500us. Effectively defines the acceleration
+'     ramp_max := 200_000                                 ' 200k angle max increment/decrement
+'     ramp_min := 1_500                                   ' 1k5 angle min increment: start add this every 500 uSec to ramp up from zero
+'     ramp_inc := 22                                      ' increment to ramping speed, add to ramp_min every 500us until ramp_max reached
+'     ramp_down := 50_000                                 ' fixed ramp down speed
+' 
+'     motorIsReversed := FALSE    ' by default our motor direction is not reversed
+'     fault := FALSE
+' 
+'     ' init status variables
+'     loop_ticks := 0
+'     minDrvTics := 65535
+'     drv_state := DCS_Unknown
+' 
+'     maxSpeed := 75            ' [1-100] default 75
+'     maxSpeed4dist := 75      ' [1-100] default 75
+' 
+'     ' preset HDMI Monitor values
+'     resetHdmiData()
+	getqx	arg02
+	negc	arg02, arg02
+	wrlong	arg02, objptr
+	add	objptr, #32
+	rdlong	local01, objptr
+	abs	local01, local01 wc
+	shr	local01, #1
+	negc	local01, local01
+	abs	muldivb_, arg02 wc
+	shr	muldivb_, #1
+	sumnc	local01, muldivb_
+	sub	objptr, ##707
+	wrlong	local01, objptr
+	abs	arg02, arg02 wc
+	shr	arg02, #1
+	negc	arg02, arg02
+	shl	arg02, #4
+	fges	local02, arg02
+	add	objptr, ##659
+	wrlong	local02, objptr
+	shl	local01, #4
+	abs	local02, local01 wc
+	shr	local02, #1
+	negc	local02, local02
+	fles	local02, local01
+	add	objptr, #4
+	wrlong	local02, objptr
+	add	objptr, #4
+	wrlong	#18, objptr
+	add	objptr, #4
+	wrlong	#4, objptr
+	rdlong	local02, ptr__isp_bldc_motor_dat__
+	sub	ptr__isp_bldc_motor_dat__, #8
+	add	objptr, #12
+	wrlong	local02, objptr
+	add	objptr, #4
+	wrlong	#1, objptr
+	add	objptr, #4
+	wrlong	#0, objptr
+	add	objptr, #4
+	wrlong	##200000, objptr
+	add	objptr, #4
+	wrlong	##1500, objptr
+	add	objptr, #4
+	wrlong	#22, objptr
+	sub	objptr, #24
+	wrlong	##50000, objptr
+	sub	objptr, ##699
+	wrlong	#0, objptr
+	add	objptr, ##567
+	wrlong	#0, objptr
+	sub	objptr, #12
+	wrlong	#0, objptr
+	sub	objptr, #64
+	wrlong	##65535, objptr
+	add	objptr, #72
+	wrlong	#0, objptr
+	sub	objptr, ##583
+	wrlong	#75, objptr
+	add	objptr, #4
+	wrlong	#75, objptr
+	sub	objptr, #40
+	call	#_isp_bldc_motor_resetHdmiData
+' 
+'     eUserSelectedVolts := VALUE_NOT_SET    ' ensure we don't drive motor unles we know the users' voltage!
+	wrlong	##-1, objptr
+	add	objptr, ##751
+	rdlong	local02, objptr
+	mov	0-0, local02
+	sub	objptr, ##675
+	rdlong	local02, objptr
+	mov	1-0, local02
+	add	ptr__isp_bldc_motor_dat__, ##1776
+	rdlong	local02, ptr__isp_bldc_motor_dat__
+	sub	ptr__isp_bldc_motor_dat__, ##1776
+	mov	2-0, local02
+	add	objptr, ##659
+	rdlong	local02, objptr
+	mov	3-0, local02
+	add	objptr, #4
+	rdlong	local02, objptr
+	mov	4-0, local02
+	brk	#37
+	add	objptr, #4
+	rdlong	local02, objptr
+	mov	0-0, local02
+	add	objptr, #4
+	rdlong	local02, objptr
+	mov	1-0, local02
+	add	objptr, #12
+	rdlong	local02, objptr
+	mov	2-0, local02
+	brk	#38
+' 
+'     if user.WHEEL_DIA_IN_INCH <> 0
+'         circInMM_x10 := distConv.circInMMforDiaInInchFloat(user.WHEEL_DIA_IN_INCH) * 10
+	mov	arg01, ##1087373312
+	add	objptr, #29
+	call	#_isp_dist_utils_circInMMforDiaInInchFloat
+	mov	local02, result1
+	mov	muldiva_, local02
+	shl	muldiva_, #2
+	add	muldiva_, local02
+	shl	muldiva_, #1
+	sub	objptr, #157
+	wrlong	muldiva_, objptr
+	sub	objptr, ##559
+	rdlong	muldivb_, objptr
+	sub	objptr, #72
+	call	#divide_
+'         tickInMM_x10 := circInMM_x10 / hallTicsPerRotation
+	add	objptr, ##635
+	wrlong	muldivb_, objptr
+	sub	objptr, ##635
+' 
+'     confgurePowerLimits(user.DRIVE_VOLTAGE)
+	mov	arg01, #6
+	call	#_isp_bldc_motor_confgurePowerLimits
+' 
+'     rSenseForBoard := VALUE_NOT_SET
+	add	objptr, ##531
+	wrlong	##-1, objptr
+'     if eDetectedBoard == REV_A
+	sub	objptr, ##519
+	rdlong	local02, objptr
+	sub	objptr, #12
+	cmp	local02, #21 wz
+'         rSenseForBoard := F_REV_A_RSENSE
+ if_e	add	objptr, ##531
+ if_e	wrlong	#5, objptr
+ if_e	sub	objptr, ##531
+ if_e	jmp	#LR__0140
+'     elseif eDetectedBoard == REV_B
+	add	objptr, #12
+	rdlong	local02, objptr
+	sub	objptr, #12
+	cmp	local02, #22 wz
+'         rSenseForBoard := F_REV_B_RSENSE
+ if_e	add	objptr, ##531
+ if_e	wrlong	#150, objptr
+ if_e	sub	objptr, ##531
+LR__0140
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_init_ret
+	ret
+
+' 
+' PUB driveAtPowerEx(power, sync) | limitPwr, motorIncre, correctedPower
+_isp_bldc_motor_driveAtPowerEx
+	mov	COUNT_, #3
+	call	#pushregs_
+	mov	local01, arg01
+	mov	local02, arg02
+	neg	local03, #100
+	fges	local03, local01
+	fles	local03, #100
+' '' Control the speed and direction of this motor using the {power, [(-100) to 100]} input. (allow sync setting)
+' '' Turns the motor on at {power}.
+' '' AFFECTED BY:  setAcceleration(), setMaxSpeed(), holdAtStop()
+'     limitPwr :=  -100 #> power <# 100
+'     if limitPwr <> power
+	cmp	local03, local01 wz
+ if_e	jmp	#LR__0150
+	mov	0-0, local01
+	brk	#39
+LR__0150
+	add	objptr, #80
+	mov	0-0, objptr
+	mov	1-0, local03
+	add	objptr, ##691
+	rdlong	local01, objptr
+	mov	2-0, local01
+	add	objptr, #4
+	rdlong	local01, objptr
+	mov	3-0, local01
+	brk	#40
+'     motorPower := limitPwr := -maxSpeed #> limitPwr <# maxSpeed
+	sub	objptr, ##739
+	rdlong	local01, objptr
+	neg	arg02, local01
+	fges	arg02, local03
+	fles	arg02, local01
+	add	objptr, #16
+	wrlong	arg02, objptr
+'     correctedPower := (motorIsReversed) ? 0 - limitPwr : limitPwr
+	add	objptr, #4
+	rdlong	local03, objptr wz
+	sub	objptr, #56
+	negnz	arg01, arg02
+'     motorIncre := incrementForPower(correctedPower)
+	call	#_isp_bldc_motor_incrementForPower
+	mov	arg01, result1
+'     setTargetAccel(motorIncre, sync)
+	mov	arg02, local02
+	call	#_isp_bldc_motor_setTargetAccel
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_driveAtPowerEx_ret
+	ret
+
+' 
+' PUB getStatus() : eStatus
+_isp_bldc_motor_getStatus
+' '' Returns status of motor drive state for this motor: enumerated constant: DS_Unknown, DS_MOVING, DS_HOLDING, or DS_OFF
+'     eStatus := DS_Unknown                               ' if not one of the following status
+	mov	_var01, #10
+'     if isStopped()
+' '' Return T/F where T means the motor is stopped
+'     bState := (drv_state == DCS_STOPPED) ? true : false
+	add	objptr, ##619
+	rdlong	_var02, objptr
+	sub	objptr, ##619
+	cmp	_var02, #1 wz
+ if_e	neg	result1, #1
+ if_ne	mov	result1, #0
+	cmp	result1, #0 wz
+ if_e	jmp	#LR__0160
+'         if stop_mode == SM_BRAKE
+	add	objptr, ##763
+	rdlong	result1, objptr
+	sub	objptr, ##763
+	cmp	result1, #2 wz
+'             eStatus := DS_HOLDING
+ if_e	mov	_var01, #12
+ if_e	jmp	#LR__0161
+'         elseif stop_mode == SM_FLOAT
+	cmp	result1, #1 wz
+'             eStatus := DS_OFF
+ if_e	mov	_var01, #13
+	jmp	#LR__0161
+LR__0160
+'     elseif isReady()
+' '' Return T/F where T means the motor cog is running
+'     bState := (drv_state <> DCS_Unknown) ? true : false
+	add	objptr, ##619
+	rdlong	_var02, objptr wz
+	sub	objptr, ##619
+ if_ne	neg	result1, #1
+ if_e	mov	result1, #0
+	cmp	result1, #0 wz
+'         eStatus := DS_MOVING
+ if_ne	mov	_var01, #11
+LR__0161
+	mov	result1, _var01
+_isp_bldc_motor_getStatus_ret
+	ret
+
+' 
+' PUB getBoardType() : eBoardRev | pSenseCommon, pinSum
+_isp_bldc_motor_getBoardType
+	mov	COUNT_, #5
+	call	#pushregs_
+' '' ID Revision of attached BLDC driver board
+'     ' returns one of REV_Unknown, REV_A, REV_B
+'     eBoardRev := REV_Unknown
+	mov	local01, #20
+'     ' if user is overriding detection then use users' override value
+'      case eUserDetectionMode    ' setup by init()
+	add	objptr, #8
+	rdlong	local02, objptr
+	sub	objptr, #8
+	cmp	local02, #21 wz
+ if_e	jmp	#LR__0170
+	cmp	local02, #22 wz
+ if_e	jmp	#LR__0171
+	jmp	#LR__0172
+LR__0170
+'         REV_A:
+'             eBoardRev := REV_A
+	mov	local01, #21
+	jmp	#LR__0183
+LR__0171
+'         REV_B:
+'             eBoardRev := REV_B
+	mov	local01, #22
+	jmp	#LR__0183
+LR__0172
+'         other:
+'             ' do we know the base pin of the board...??
+'             if pinbase == VALUE_NOT_SET
+	add	objptr, ##551
+	rdlong	local03, objptr
+	sub	objptr, ##551
+	cmp	local03, ##-1 wz
+ if_ne	jmp	#LR__0173
+	brk	#42
+	jmp	#LR__0182
+LR__0173
+'             else
+'                 ' yes, detect the board rev
+'                 pinSum := 0
+	mov	local04, #0
+	add	objptr, ##551
+	rdlong	local05, objptr
+	sub	objptr, ##551
+	add	local05, #4
+'                 pSenseCommon := pinbase + 4
+'                 'debug("BLDC: getBoardType() pinbase=(", udec_(pinbase), "), pSenseCommon=(", uhex_Long_(pSenseCommon), ")")
+'                 pinhigh(pSenseCommon)                   ' charge 0.1uF capacitor on RevB boards
+	drvh	local05
+'                 waitms(1)
+	mov	arg01, #1
+	call	#__system___waitms
+'                 pinfloat(pSenseCommon)                  ' release the pin, ready to read state
+	fltl	local05
+' 
+'                 repeat 500                              ' check pin state 500 times, x = sum of results
+	callpa	#(@LR__0176-@LR__0174)>>2,fcache_load_ptr_
+LR__0174
+	rep	@LR__0177, #500
+LR__0175
+'                     pinSum += pinread(pSenseCommon)
+	mov	arg01, local05
+	test	arg01, #32 wz
+ if_ne	mov	result1, inb
+ if_e	mov	result1, ina
+	shr	result1, arg01
+	shr	arg01, #6
+	zerox	result1, arg01
+	add	local04, result1
+LR__0176
+LR__0177
+'                 ' Handle the result!
+'                 ' Note: RevA will always be 0 due to a 1K pulldown on that board.
+'                 '       RevB count will vary with clkfreq (due to capacitor discharge)- typically in the range of 40 to 180
+'                 '       If no board attached, count will always be >250, and typically will be 500.
+'                 if pinSum == 0
+	cmp	local04, #0 wz
+ if_ne	jmp	#LR__0178
+	mov	0-0, local04
+	brk	#43
+'                     eBoardRev := REV_A
+	mov	local01, #21
+	jmp	#LR__0181
+LR__0178
+'                 elseif pinSum > 250
+	cmps	local04, #251 wc
+ if_b	jmp	#LR__0179
+	mov	0-0, local04
+	brk	#44
+	jmp	#LR__0180
+LR__0179
+'                 else
+	mov	0-0, local04
+	brk	#45
+'                     eBoardRev := REV_B
+	mov	local01, #22
+LR__0180
+LR__0181
+LR__0182
+LR__0183
+	mov	result1, local01
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_getBoardType_ret
+	ret
+
+' 
+' PUB clearFaultSignal()
+_isp_bldc_motor_clearFaultSignal
+' '' Reset top-level fault indicator
+' ' used by two-wheel steering
+'     if fault
+	add	objptr, ##623
+	rdlong	_var01, objptr wz
+	sub	objptr, ##623
+ if_e	jmp	#LR__0190
+	brk	#46
+'         fault := false
+	add	objptr, ##623
+	wrlong	#0, objptr
+	sub	objptr, ##623
+LR__0190
+_isp_bldc_motor_clearFaultSignal_ret
+	ret
+
+' 
+' PUB validVoltageForChoice(userVoltage) : legalVoltage
+_isp_bldc_motor_validVoltageForChoice
+	mov	COUNT_, #1
+	call	#pushregs_
+' '' VALIDATE users' voltage choice returns legalVoltage or INVALID_VOLTAGE
+'     legalVoltage := userVoltage
+	mov	local01, arg01
+'     if user.MOTOR_TYPE == MOTR_DOCO_4KRPM
+'         if lookdown(userVoltage: PWR_6p0V..PWR_25p9V) == 0
+	mov	arg03, ptr__isp_bldc_motor_dat__
+	add	arg03, ##1992
+	mov	arg02, #1
+	mov	arg04, #9
+	call	#__system___lookdown
+	cmp	result1, #0 wz
+'             legalVoltage := INVALID_VOLTAGE
+ if_e	neg	local01, #1
+	mov	0-0, local01
+	brk	#48
+	mov	result1, local01
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_validVoltageForChoice_ret
+	ret
+
+' 
+' PUB validDetectModeForChoice(userDetMode) : legalMode
+_isp_bldc_motor_validDetectModeForChoice
+	mov	COUNT_, #1
+	call	#pushregs_
+' '' VALIDATE users' detection mode choice returns legalMode or INVALID_DET_MODE
+'     legalMode := userDetMode
+	mov	local01, arg01
+'     if lookdown(userDetMode: BRD_AUTO_DET..BRD_REV_B) == 0
+	mov	arg03, ptr__isp_bldc_motor_dat__
+	add	arg03, ##2036
+	mov	arg02, #1
+	mov	arg04, #3
+	call	#__system___lookdown
+	cmp	result1, #0 wz
+'         legalMode := INVALID_DET_MODE
+ if_e	neg	local01, #1
+	mov	0-0, local01
+	brk	#50
+	mov	result1, local01
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_validDetectModeForChoice_ret
+	ret
+
+' 
+' PRI map(inValue, inMin, inMax, outMin, outMax) : nResult | slope
+_isp_bldc_motor_map
+' ' Maps inValue in range inMin..inMax to new value in range outMin..outMax
+'     nResult := 0
+	mov	result1, #0
+'     if (inValue > 0)
+	cmps	arg01, #1 wc
+ if_b	jmp	#LR__0200
+'         ' treat positive values out-of-bounds
+'         if (inValue <= inMin)
+	cmps	arg01, arg02 wcz
+'             nResult := outMin
+ if_be	mov	result1, arg04
+ if_be	jmp	#LR__0203
+'         elseif (inValue >= inMax)
+	cmps	arg01, arg03 wc
+'             nResult :=  outMax
+ if_ae	mov	result1, arg05
+	jmp	#LR__0203
+LR__0200
+'     elseif (inValue < 0)
+	cmps	arg01, #0 wc
+ if_ae	jmp	#LR__0202
+'         ' treat negative values out-of-bounds
+'         if (inValue >= inMin)
+	cmps	arg01, arg02 wc
+'             nResult := outMin
+ if_ae	mov	result1, arg04
+ if_ae	jmp	#LR__0201
+'         elseif (inValue <= inMax)
+	cmps	arg01, arg03 wcz
+'             nResult :=  outMax
+ if_be	mov	result1, arg05
+LR__0201
+LR__0202
+LR__0203
+'     ' NOT  out-of-bounds, so scale the inValue
+'     if inValue <> 0 and nResult == 0
+	cmp	arg01, #0 wz
+ if_e	jmp	#LR__0204
+	cmp	result1, #0 wz
+ if_ne	jmp	#LR__0204
+	sub	arg05, arg04
+	sub	arg03, arg02
+	mov	muldiva_, arg05
+	mov	muldivb_, arg03
+	call	#divide_
+	sub	arg01, arg02
+	qmul	muldivb_, arg01
+'             slope := (outMax - outMin) / (inMax - inMin)
+'             nResult := outMin + slope * (inValue - inMin)
+	getqx	muldivb_
+	add	arg04, muldivb_
+	mov	result1, arg04
+LR__0204
+_isp_bldc_motor_map_ret
+	ret
+
+'     'debug("- map() ", sdec_long(inValue - inMin), sdec_long(inMin) , sdec_long(inMax), sdec_long(inMax - inMin))
+'     'debug("-       ", sdec_long(slope), sdec_long(outMin) , sdec_long(outMax), sdec_long(outMax - outMin))
+'     'debug("- map() ", sdec_long(inValue) , " --> ", sdec_long(nResult))
+' 
+' PRI incrementForPower(nUserPower) : nMotorIncre
+_isp_bldc_motor_incrementForPower
+	mov	COUNT_, #2
+	call	#pushregs_
+	mov	local01, arg01
+' ' translate -100 to +100 value to Incre value needed by motor
+'     if eUserSelectedVolts == VALUE_NOT_SET
+	rdlong	result1, objptr
+	cmp	result1, ##-1 wz
+'         abort
+ if_e	mov	arg01, abortchain
+ if_e	mov	arg02, #0
+ if_e	mov	arg03, #0
+ if_e	call	#__longjmp
+' 
+'     if nUserPower < 0
+	cmps	local01, #0 wc
+ if_ae	jmp	#LR__0210
+'         ' map REV request
+'         nMotorIncre := map(nUserPower, -1, -100, minRevIncreAtPwr, maxRevIncreAtPwr)
+	add	objptr, #28
+	rdlong	arg04, objptr
+	add	objptr, #4
+	rdlong	arg05, objptr
+	sub	objptr, #32
+	mov	arg01, local01
+	neg	arg02, #1
+	neg	arg03, #100
+	call	#_isp_bldc_motor_map
+	mov	local02, result1
+	jmp	#LR__0213
+LR__0210
+'     elseif nUserPower > 0
+	cmps	local01, #1 wc
+ if_b	jmp	#LR__0211
+'         ' map FWD request
+'         nMotorIncre := map(nUserPower, +1, +100, minFwdIncreAtPwr, maxFwdIncreAtPwr)
+	add	objptr, #20
+	rdlong	arg04, objptr
+	add	objptr, #4
+	rdlong	arg05, objptr
+	sub	objptr, #24
+	mov	arg01, local01
+	mov	arg02, #1
+	mov	arg03, #100
+	call	#_isp_bldc_motor_map
+	mov	local02, result1
+	jmp	#LR__0212
+LR__0211
+'     else
+'         ' this is a STOP request
+'         nMotorIncre := 0    ' stop!
+	mov	local02, #0
+LR__0212
+LR__0213
+	mov	result1, local02
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_incrementForPower_ret
+	ret
+
+' 
+' PRI offsetsForMotor(eMotorType) : fwdDegrees, revDegrees | ofsDegr, index
+_isp_bldc_motor_offsetsForMotor
+	mov	COUNT_, #4
+	call	#pushregs_
+'     case eMotorType
+	cmp	arg01, #1 wz
+ if_ne	jmp	#LR__0222
+'       MOTR_DOCO_4KRPM:
+'         index := lookdown(user.DRIVE_VOLTAGE: PWR_7p4V..PWR_24p0V)
+	mov	arg03, ptr__isp_bldc_motor_dat__
+	add	arg03, ##2048
+	mov	arg01, #6
+	mov	arg02, #1
+	mov	arg04, #7
+	call	#__system___lookdown
+	mov	local01, result1
+'         ' 15 degrees per tic so +- 15 is our offset?
+' {
+' }
+'         if eDetectedBoard == REV_B
+	add	objptr, #12
+	rdlong	arg04, objptr
+	sub	objptr, #12
+	cmp	arg04, #22 wz
+	mov	arg03, ptr__isp_bldc_motor_dat__
+ if_ne	jmp	#LR__0220
+'           if (ofsDegr := lookup(index: 33, 33, 39, 40, 36, 37, 45)) == 0
+	add	arg03, ##2076
+	mov	arg01, local01
+	mov	arg02, #1
+	mov	arg04, #7
+	call	#__system___lookup
+	mov	local02, result1 wz
+'               ofsDegr := 45
+ if_e	mov	local02, #45
+	jmp	#LR__0221
+LR__0220
+'         else
+'           if (ofsDegr := lookup(index: 52, 53, 53, 53, 54, 54, 53)) == 0
+	add	arg03, ##2104
+	mov	arg01, local01
+	mov	arg02, #1
+	mov	arg04, #7
+	call	#__system___lookup
+	mov	local02, result1 wz
+'               ofsDegr := 53
+ if_e	mov	local02, #53
+LR__0221
+'         fwdDegrees := ofsDegr                           ' 0 is bad > 2A!
+	mov	local03, local02
+	mov	local04, #360
+	sub	local04, local02
+'         revDegrees := 360 - ofsDegr                     ' vs. using 360?
+	jmp	#LR__0223
+LR__0222
+'       other:
+'         ' 4 degrees per tic, offset was actually 5 tics! or 20 degrees (0.0556 of rotation)
+'         ' from characterization at 18v5:
+'         fwdDegrees := ofsDegr := 43
+	mov	local03, #43
+'         revDegrees := 360 - fwdDegrees
+	mov	local04, #317
+LR__0223
+	mov	result1, local03
+	mov	result2, local04
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_offsetsForMotor_ret
+	ret
+
+' {
+' }
+' 
+' PRI getInternalDetectMode(eDetectMode) : eValidMode, bUserOverride | legalMode
+_isp_bldc_motor_getInternalDetectMode
+	mov	_var01, arg01
+' ' ensure suer specifies a good value
+'     eValidMode := BRD_AUTO_DET
+	mov	result1, #30
+'     bUserOverride := FALSE
+	mov	result2, #0
+'     legalMode := VALUE_NOT_SET
+'     CASE eDetectMode
+	sub	_var01, #30
+	fle	_var01, #3
+	jmprel	_var01
+LR__0230
+	jmp	#LR__0231
+	jmp	#LR__0232
+	jmp	#LR__0233
+	jmp	#LR__0234
+LR__0231
+'         user.BRD_AUTO_DET:
+'             legalMode := BRD_AUTO_DET    ' xlate to our internal value
+	mov	_var02, #30
+	jmp	#LR__0235
+LR__0232
+'         user.BRD_REV_A:
+'             legalMode := BRD_REV_A
+	mov	_var02, #31
+'             bUserOverride := TRUE
+	neg	result2, #1
+	jmp	#LR__0235
+LR__0233
+'         user.BRD_REV_B:
+'             legalMode := BRD_REV_B
+	mov	_var02, #32
+'             bUserOverride := TRUE
+	neg	result2, #1
+	jmp	#LR__0235
+LR__0234
+'         OTHER :
+'             legalMode := VALUE_NOT_SET
+	neg	_var02, #1
+LR__0235
+' 
+'     ' if legal base-pin then start cog
+'     if legalMode <> VALUE_NOT_SET
+	cmp	_var02, ##-1 wz
+'         eValidMode := legalMode        ' record base pin number
+ if_ne	mov	result1, _var02
+_isp_bldc_motor_getInternalDetectMode_ret
+	ret
+
+' 
+' PRI confgurePowerLimits(userVoltage) | selectedPower, index
+_isp_bldc_motor_confgurePowerLimits
+	mov	COUNT_, #3
+	call	#pushregs_
+' ' set up our motor drive limits based upon the user configured Voltage selection
+'     selectedPower := validVoltageForChoice(userVoltage)
+	call	#_isp_bldc_motor_validVoltageForChoice
+	mov	local01, result1
+	mov	0-0, local01
+	brk	#51
+'     if selectedPower == INVALID_VOLTAGE
+	cmp	local01, ##-1 wz
+'         abort
+ if_e	mov	arg01, abortchain
+ if_e	mov	arg02, #0
+ if_e	mov	arg03, #0
+ if_e	call	#__longjmp
+' 
+'     eUserSelectedVolts := VALUE_NOT_SET  ' preset
+	wrlong	##-1, objptr
+'     minFwdIncreAtPwr := VALUE_NOT_SET
+	add	objptr, #20
+	wrlong	##-1, objptr
+'     maxFwdIncreAtPwr := VALUE_NOT_SET
+	add	objptr, #4
+	wrlong	##-1, objptr
+'     minRevIncreAtPwr := VALUE_NOT_SET
+	add	objptr, #4
+	wrlong	##-1, objptr
+'     maxRevIncreAtPwr := VALUE_NOT_SET
+	add	objptr, #4
+	wrlong	##-1, objptr
+	sub	objptr, #32
+' 
+'     if user.MOTOR_TYPE == MOTR_DOCO_4KRPM
+	jmp	#LR__0240
+'         if (index := lookdown(selectedPower:PWR_7p4V, PWR_11p1V, PWR_12p0V, PWR_14p8V, PWR_18p5V, PWR_22p2V, PWR_24p0V)) <> 0
+'             if eDetectedBoard == REV_B
+'                 maxFwdIncreAtPwr := lookup(index: -385_000_000, -287_500_000, -485_000_000, -388_000_000, -449_500_000, -420_000_000, -460_000_000)
+'                 maxRevIncreAtPwr := lookup(index:  385_000_000,  287_500_000,  485_000_000,  388_000_000,  449_500_000,  420_000_000,  460_000_000)
+'             else
+'                     ' 282_000_000 100% anything above yields RPM 1885.0, cts/Sec 754, @0.11A
+'                     ' 545_000_000 100% anything above yields RPM 3645.0, cts/Sec 1458, @0.50A
+'                     ' 335_000_000 100% anything above yields RPM 2242.0, cts/Sec 897, @0.14A
+'                     ' 376_000_000 100% anything above yields RPM 2517.0, cts/Sec 1007, @0.88A
+'                     ' 376_000_000 100% anything above yields RPM 2_745, cts/sec 1_098
+'                     ' 100% anything above yields RPM 2_810, cts/sec 1_124
+'                     ' 100% anything above yields RPM 2_877, cts/sec 1_151
+'                     ' 100% anything above yields RPM 2_940, cts/sec 1_178
+'                     ' 100% anything above yields RPM 3_010, cts/sec 1_204
+'                     ' 100% anything above yields RPM 3_077, cts/sec 1_231
+'                     ' 100% anything above yields RPM 3_145, cts/sec 1_258
+'                     ' 470_000_000 100% anything above yields RPM 2662.0, cts/Sec 1065, @0.89A
+'                     ' 100% anything above yields RPM 3145.0, cts/Sec 1258, @0.78A
+'                     ' 391_000_000 100% anything above yields RPM 2615.0, cts/Sec 1046, @0.620A
+'                 maxFwdIncreAtPwr := lookup(index: -282_000_000, -545_000_000, -335_000_000, -376_000_000, -398_000_000, -470_000_000, -391_000_000)
+'                 maxRevIncreAtPwr := lookup(index:  282_000_000,  545_000_000,  335_000_000,  376_000_000,  398_000_000,  470_000_000,  391_000_000)
+'         else
+	mov	0-0, local01
+	brk	#52
+'             abort   ' SHOULD NEVER get here!
+LR__0240
+'     else
+'         ' is this more readable than the case statement?
+'         if (index := lookdown(selectedPower:PWR_6p0V..PWR_11p1V, PWR_12p0V, PWR_14p8V, PWR_18p5V, PWR_22p2V..PWR_24p0V)) <> 0
+	mov	arg03, ptr__isp_bldc_motor_dat__
+	add	arg03, ##2272
+	mov	arg01, local01
+	mov	arg02, #1
+	mov	arg04, #8
+	call	#__system___lookdown
+	mov	local02, result1 wz
+ if_e	jmp	#LR__0241
+'             ' 90_000_000  anything above yields RPM 165.3, cts/Sec 248 (until fault at 170.6 256)
+'             ' 97_000_000  anything above yields RPM 181.3, cts/Sec 272 (until fault at 186.6 280)
+'             ' 120_000_000 anything above yields RPM 224.0, cts/Sec 336 (until fault at 229.8 344)
+'             ' 147_000_000 anything above yields RPM 272.0, cts/Sec 408 (until fault at 277.3 416)
+'             ' 172_000_000 anything above yields RPM 320.0, cts/Sec 480 (until fault at 325.3 480)
+'             ' 172_000_000     FAKE above yields RPM 320.0, cts/Sec 480 (until fault at 325.3 480)
+'             maxFwdIncreAtPwr := lookup(index:  90_000_000,  90_000_000,  90_000_000,  97_000_000,  120_000_000,  147_000_000,  172_000_000,  172_000_000)
+	mov	arg03, ptr__isp_bldc_motor_dat__
+	add	arg03, ##2304
+	mov	arg01, local02
+	mov	arg02, #1
+	mov	arg04, #8
+	call	#__system___lookup
+	add	objptr, #24
+	wrlong	result1, objptr
+	sub	objptr, #24
+'             maxRevIncreAtPwr := lookup(index: -90_000_000, -90_000_000, -90_000_000, -97_000_000, -120_000_000, -147_000_000, -172_000_000, -172_000_000)
+	mov	arg03, ptr__isp_bldc_motor_dat__
+	add	arg03, ##2336
+	mov	arg01, local02
+	mov	arg02, #1
+	mov	arg04, #8
+	call	#__system___lookup
+	add	objptr, #32
+	wrlong	result1, objptr
+	sub	objptr, #32
+	jmp	#LR__0242
+LR__0241
+'         else
+	mov	0-0, local01
+	brk	#53
+'             abort   ' SHOULD NEVER get here!
+	mov	arg01, abortchain
+	mov	arg02, #0
+	mov	arg03, #0
+	call	#__longjmp
+LR__0242
+' 
+'     fMotorVolts := 0.0  ' default
+	add	objptr, #4
+	wrlong	#0, objptr
+'     if maxFwdIncreAtPwr <> VALUE_NOT_SET                ' if we have good motor then set rest of values
+	add	objptr, #20
+	rdlong	local03, objptr
+	sub	objptr, #24
+	cmp	local03, ##-1 wz
+ if_e	jmp	#LR__0243
+'         eUserSelectedVolts := selectedPower
+	wrlong	local01, objptr
+'         fMotorVolts := motorVoltage(selectedPower)
+	mov	arg01, local01
+	call	#_isp_bldc_motor_motorVoltage
+	add	objptr, #4
+	wrlong	result1, objptr
+'         if user.MOTOR_TYPE == MOTR_DOCO_4KRPM
+'             minFwdIncreAtPwr := 544_628           ' anything below yields NO rotation
+	add	objptr, #16
+	wrlong	##544628, objptr
+'             minRevIncreAtPwr := 0 - minFwdIncreAtPwr
+	add	objptr, #8
+	wrlong	##-544628, objptr
+	sub	objptr, #28
+LR__0243
+	rdlong	local03, objptr
+	mov	0-0, local03
+	add	objptr, #24
+	rdlong	local02, objptr
+	mov	1-0, local02
+	sub	objptr, #4
+	rdlong	local02, objptr
+	sub	objptr, #20
+	mov	2-0, local02
+	brk	#54
+	mov	result1, #0
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_confgurePowerLimits_ret
+	ret
+
+' 
+' PRI setTargetAccel(nTgtIncr, sync) | inincr
+_isp_bldc_motor_setTargetAccel
+'     inincr := nTgtIncr
+	mov	_var01, arg01
+'     nTgtIncr ZEROX= 30                                  ' clear bit 31
+	zerox	arg01, #30
+	mov	_var02, arg02
+	shl	_var02, #31
+'     nTgtIncr |= (sync << 31)                            ' bit 31 set if sync required
+	or	arg01, _var02
+'     targetIncre := nTgtIncr
+	add	objptr, ##563
+	wrlong	arg01, objptr
+	mov	0-0, _var01
+	mov	1-0, arg01
+	shr	arg01, #31
+	mov	2-0, arg01
+	mov	3-0, arg02
+	brk	#55
+	abs	_var02, _var01 wc
+	qdiv	_var02, ##10000
+'     tvTargetIncreInM := inincr / 10_000
+	add	objptr, #124
+	getqx	_var02
+	negc	_var02, _var02
+	wrlong	_var02, objptr
+	sub	objptr, ##687
+_isp_bldc_motor_setTargetAccel_ret
+	ret
+
+' 
+' PRI motorVoltage(eSelectedPower) : fVolts | index
+_isp_bldc_motor_motorVoltage
+	mov	COUNT_, #2
+	call	#pushregs_
+	mov	local01, arg01
+	mov	local02, #0
+'     if (index := lookdown(eSelectedPower:PWR_6p0V..PWR_25p9V)) <> 0
+	mov	arg03, ptr__isp_bldc_motor_dat__
+	add	arg03, ##2368
+	mov	arg01, local01
+	mov	arg02, #1
+	mov	arg04, #9
+	call	#__system___lookdown
+	mov	arg02, result1 wz
+ if_e	jmp	#LR__0250
+'         fVolts := lookup(index: 6.0, 7.4, 11.1, 12.0, 14.8, 18.5, 22.2, 24.0, 25.9)
+	mov	arg03, ptr__isp_bldc_motor_dat__
+	add	arg03, ##2404
+	mov	arg01, arg02
+	mov	arg02, #1
+	mov	arg04, #9
+	call	#__system___lookup
+	mov	local02, result1
+	jmp	#LR__0251
+LR__0250
+'     else
+	mov	0-0, local01
+	brk	#56
+'         abort   ' SHOULD NEVER get here!
+	mov	arg01, abortchain
+	mov	arg02, #0
+	mov	arg03, #0
+	call	#__longjmp
+LR__0251
+	mov	result1, local02
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_motorVoltage_ret
+	ret
+
+' '}
+' {
+' '}
+' 
+' PUB resetWindowAccumulators()
+_isp_bldc_motor_resetWindowAccumulators
+	mov	COUNT_, #1
+	call	#pushregs_
+	mov	arg01, objptr
+	add	arg01, #483
+' '' INTERNAL USE: reset our window accumulator data
+'     longfill(@hallCountsWindow, 0, HALL_WINDOW_SIZE)                            ' zero our windowed accum
+	mov	arg03, #7
+	setq	arg03
+	wrlong	#0, arg01
+'     hallWinEntryCt := hallWindowSum := hallWinIndex := 0
+	add	objptr, ##515
+	wrlong	#0, objptr
+	add	objptr, #12
+	wrlong	#0, objptr
+	sub	objptr, #8
+	wrlong	#0, objptr
+'     hallCntsIn8thSec := 0
+	add	objptr, #4
+	wrlong	#0, objptr
+'     prioro8thSecPos := pos                                                      ' reset by adopting current value
+	add	objptr, #76
+	rdlong	local01, objptr
+	add	objptr, #40
+	wrlong	local01, objptr
+	sub	objptr, ##639
+'     resetHdmiData()
+	call	#_isp_bldc_motor_resetHdmiData
+'     resetTracking()
+' '' Resets the position tracking values returned by getDistance() and getRotations()
+'     posTrkHallTicks := 0    ' reset all of our trackers (they are incremented in sensor loop)
+	add	objptr, ##627
+	wrlong	#0, objptr
+	sub	objptr, ##627
+'     waitms(200) ' values will clear in 125ms
+	mov	arg01, #200
+	call	#__system___waitms
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_resetWindowAccumulators_ret
+	ret
+
+' 
+' PUB updateWindowAccumulators() | nHallCntsIn8thSec
+_isp_bldc_motor_updateWindowAccumulators
+	mov	COUNT_, #1
+	call	#pushregs_
+' '' INTERNAL USE: accum our windowed values
+'     nHallCntsIn8thSec := absDistanceInTics(pos, prioro8thSecPos)                ' Read the next sensor value
+	add	objptr, ##599
+	rdlong	result1, objptr
+	add	objptr, #40
+	rdlong	arg02, objptr
+	sub	arg02, result1
+'         '  -7 -> -9 = abs(-7 - -9) = abs(2) = 2
+'         '  -11 -> -9 = abs(-11 - -9) = abs(-2) = 2
+'         '  9 -> -9 = abs(9 - -9) + abs(18) = 18
+'         ' -9 -> 6 = abs(-9 - 6) = abs(-15) = 15
+'         ' -3 -> 6 = abs(-3 - 6) = abs(-9) = 9
+'         ' 9 -> 6 = abs(9 - 6) = abs(3) = 3
+'         ' 9 -> 12 = abs(9 - 12) = abs(-3) = 3
+'     nHallTics := abs(priorPos - newPos)
+	abs	arg02, arg02
+'     prioro8thSecPos := pos                                                      ' save prior
+	wrlong	result1, objptr
+	sub	objptr, #156
+	mov	arg01, objptr
+	add	objptr, #32
+	rdlong	local01, objptr
+	shl	local01, #2
+	add	local01, arg01
+'         hallWindowSum -= LONG[@hallCountsWindow][hallWinIndex]                  ' Remove the oldest entry from the sum
+	add	objptr, #12
+	rdlong	result1, objptr
+	rdlong	local01, local01
+	sub	result1, local01
+	wrlong	result1, objptr
+	sub	objptr, #12
+	rdlong	local01, objptr
+	shl	local01, #2
+	add	local01, arg01
+'     long [@hallCountsWindow][hallWinIndex] := nHallCntsIn8thSec                 ' place the newest reading into the window
+	wrlong	arg02, local01
+'         hallWindowSum += hallCntsIn8thSec                                       ' Add the newest reading to the sum
+	add	objptr, #12
+	rdlong	local01, objptr
+	sub	objptr, #4
+	rdlong	result1, objptr
+	add	local01, result1
+	add	objptr, #4
+	wrlong	local01, objptr
+	sub	objptr, #12
+	rdlong	local01, objptr
+	add	local01, #1
+	and	local01, #7
+'         hallWinIndex := (hallWinIndex + 1) +// HALL_WINDOW_SIZE                 ' Increment the index, and wrap to 0 if it exceeds the window size
+	wrlong	local01, objptr
+'         if hallWinEntryCt < HALL_WINDOW_SIZE                                    ' incr number of samples in sum until is window size
+	add	objptr, #4
+	rdlong	local01, objptr
+	sub	objptr, ##519
+	cmps	local01, #8 wc
+'             hallWinEntryCt++
+ if_b	add	objptr, ##519
+ if_b	add	local01, #1
+ if_b	wrlong	local01, objptr
+ if_b	sub	objptr, ##519
+' 
+'     posTrkHallTicks += nHallCntsIn8thSec
+	add	objptr, ##627
+	rdlong	local01, objptr
+	add	local01, arg02
+	wrlong	local01, objptr
+	sub	objptr, ##627
+' 
+'     updateHdmiData()
+	call	#_isp_bldc_motor_updateHdmiData
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_updateWindowAccumulators_ret
+	ret
+
+' 
+' PRI resetHdmiData()
+_isp_bldc_motor_resetHdmiData
+'     tvMaxFps_x10 := tvMaxMPH_x10 := tvMaxkPH_x10 := 0
+	add	objptr, ##675
+	wrlong	#0, objptr
+	sub	objptr, #4
+	wrlong	#0, objptr
+	sub	objptr, #4
+	wrlong	#0, objptr
+'     tvMaxRpmIn10ths := tvMaxCntsInSec := tvMaxMmPerSec_x10 := 0
+	add	objptr, #12
+	wrlong	#0, objptr
+	add	objptr, #4
+	wrlong	#0, objptr
+	sub	objptr, #20
+	wrlong	#0, objptr
+'     tv360rpm_x10 := tv360rpm := 0
+	add	objptr, #36
+	wrlong	#0, objptr
+	sub	objptr, #4
+	wrlong	#0, objptr
+'     tvMaxSenseI := 0
+	sub	objptr, #4
+	wrlong	#0, objptr
+	sub	objptr, ##691
+_isp_bldc_motor_resetHdmiData_ret
+	ret
+
+' 
+' PRI updateHdmiData()
+_isp_bldc_motor_updateHdmiData
+	mov	COUNT_, #1
+	call	#pushregs_
+'     cntsInSec := hallWindowSum                                                  ' moving sum
+	add	objptr, ##527
+	rdlong	arg02, objptr
+	add	objptr, #128
+	wrlong	arg02, objptr
+	mov	arg01, arg02
+	shl	arg01, #4
+	sub	arg01, arg02
+	shl	arg01, #2
+	mov	muldiva_, arg01
+	shl	muldiva_, #2
+	add	muldiva_, arg01
+	shl	muldiva_, #1
+	sub	objptr, ##583
+	rdlong	muldivb_, objptr
+	sub	objptr, #72
+	call	#divide_
+	abs	result1, muldivb_ wc
+	qdiv	result1, #10
+'     tvRpm_x10 := ((cntsInSec * 60) * 10) / hallTicsPerRotation
+	add	objptr, ##643
+	wrlong	muldivb_, objptr
+'     rpm := tvRpm_x10 / 10
+	add	objptr, #4
+' 
+'     tvMaxRpmIn10ths := max(tvRpm_x10, tvMaxRpmIn10ths)
+	getqx	result1
+	negc	result1, result1
+	wrlong	result1, objptr
+	add	objptr, #16
+	rdlong	arg02, objptr
+	cmps	muldivb_, arg02 wcz
+ if_a	mov	result1, muldivb_
+ if_be	mov	result1, arg02
+	abs	arg02, result1 wc
+	qdiv	arg02, #10
+' ' return max of a or b
+'     nMax := (a > b) ? a : b
+	wrlong	result1, objptr
+'     maxRpm := tvMaxRpmIn10ths / 10
+	sub	objptr, #12
+'     tvMaxCntsInSec := max(cntsInSec, tvMaxCntsInSec)
+' ' return max of a or b
+'     nMax := (a > b) ? a : b
+' 
+'     tvMaxSenseI := max(sense_i_mV, tvMaxSenseI)
+' ' return max of a or b
+'     nMax := (a > b) ? a : b
+	getqx	result1
+	negc	result1, result1
+	wrlong	result1, objptr
+	add	objptr, #4
+	rdlong	arg01, objptr
+	add	objptr, #28
+	rdlong	arg02, objptr
+	cmps	arg01, arg02 wcz
+ if_a	mov	result1, arg01
+ if_be	mov	result1, arg02
+	wrlong	result1, objptr
+	sub	objptr, #92
+	rdlong	muldiva_, objptr
+	add	objptr, #100
+	rdlong	arg02, objptr
+	cmps	muldiva_, arg02 wcz
+ if_a	mov	result1, muldiva_
+ if_be	mov	result1, arg02
+	wrlong	result1, objptr
+	sub	objptr, #160
+	rdlong	muldivb_, objptr
+	sub	objptr, ##531
+	call	#divide_
+'     ' power calcs
+'     tv_mA := sense_i_mV/rSenseForBoard                                          ' in multiples of 0.1mA
+	add	objptr, ##703
+	wrlong	muldivb_, objptr
+'     tv_mW := round((float(tv_mA) *. fMotorVolts)/. F_SCALE_WATTS)               ' in mW
+	sub	objptr, ##703
+	abs	arg01, muldivb_ wc
+ if_b	decod	local01, #31
+ if_ae	mov	local01, #0
+	call	#__system___float_fromuns
+	xor	result1, local01
+	mov	arg01, result1
+	add	objptr, #4
+	rdlong	arg02, objptr
+	sub	objptr, #4
+	call	#__system___float_mul
+	mov	arg01, result1
+	mov	arg02, ##1092616192
+	call	#__system___float_div
+	mov	arg01, result1
+	mov	arg02, #1
+	call	#__system___float_tointeger
+	add	objptr, ##707
+	wrlong	result1, objptr
+	sub	objptr, #52
+	rdlong	result1, objptr
+	sub	objptr, ##587
+	rdlong	arg02, objptr
+	qmul	result1, arg02
+' 
+'     if user.WHEEL_DIA_IN_INCH <> 0
+	add	objptr, ##563
+	rdlong	result1, objptr
+	getqx	arg02
+	qmul	arg02, result1
+	getqx	result1
+	abs	result1, result1 wc
+	qdiv	result1, #360
+'         ' pos is in hall-steps of 4Degr each (4deg for 6.5motor, 15deg for doco4k).
+'         ' circumference of wheel is in mm x10
+'         '   degrees of rotation is cntsInSec * 4
+'         '   number of rotations is degrees / 360
+'         '   dist in mm is (circInMM_x10 * rotations) / 10
+'         mmPerSec_x10 := (((cntsInSec * degrPerTic) * circInMM_x10) / 360)
+	add	objptr, #80
+'         ftPerSec_x10 := distConv.mmps2fps(mmPerSec_x10 * 10)
+' '' Convert distance in mm/s to fps
+'     ' RULE: 1 mm/sec = 0.00328084 ft/sec
+'     fValue := float(nDistInMMPS) *. kFPS_IN_MMPS
+	getqx	result1
+	negc	arg02, result1
+	wrlong	arg02, objptr
+	mov	arg01, arg02
+	shl	arg01, #2
+	add	arg01, arg02
+	shl	arg01, #1
+	add	objptr, #77
+	abs	arg01, arg01 wc
+ if_b	decod	local01, #31
+ if_ae	mov	local01, #0
+	call	#__system___float_fromuns
+	xor	result1, local01
+	mov	arg01, result1
+	mov	arg02, ##995558237
+	call	#__system___float_mul
+	mov	arg01, result1
+'     nDistInFps := trunc(fValue)
+	mov	arg02, #0
+	call	#__system___float_tointeger
+	sub	objptr, #73
+	wrlong	result1, objptr
+	sub	objptr, #4
+	rdlong	arg02, objptr
+	mov	arg01, arg02
+	shl	arg01, #2
+	add	arg01, arg02
+	shl	arg01, #1
+'         kmh_x10 := distConv.mmps2kmh(mmPerSec_x10 * 10)
+	add	objptr, #77
+' '' Convert distance in mm/s to km/hr
+'     ' RULE: 1 mm/sec = 0.0036 km/hr
+'     fValue := float(nDistInMMPS) *. kKMH_IN_MMPS
+	abs	arg01, arg01 wc
+ if_b	decod	local01, #31
+ if_ae	mov	local01, #0
+	call	#__system___float_fromuns
+	xor	result1, local01
+	mov	arg01, result1
+	mov	arg02, ##996929018
+	call	#__system___float_mul
+	mov	arg01, result1
+'     nDistInkmph := trunc(fValue)
+	mov	arg02, #0
+	call	#__system___float_tointeger
+	sub	objptr, #69
+	wrlong	result1, objptr
+'         mph_x10 := distConv.fps2mph(ftPerSec_x10)
+	sub	objptr, #4
+	rdlong	arg01, objptr
+	add	objptr, #73
+' '' Convert distance in ft/s to mi/hr
+'     ' RULE: 1 ft/sec = 0.681818 mi/hr
+'     fValue := float(nDistInFPS) *. kMPH_IN_FPS
+	abs	arg01, arg01 wc
+ if_b	decod	local01, #31
+ if_ae	mov	local01, #0
+	call	#__system___float_fromuns
+	xor	result1, local01
+	mov	arg01, result1
+	mov	arg02, ##1060015008
+	call	#__system___float_mul
+	mov	arg01, result1
+'     nDistInMPH := trunc(fValue)
+	mov	arg02, #0
+	call	#__system___float_tointeger
+	sub	objptr, #65
+	wrlong	result1, objptr
+' 
+'         tvMaxMmPerSec_x10 := max(mmPerSec_x10, tvMaxMmPerSec_x10)
+	sub	objptr, #12
+	rdlong	arg01, objptr
+	sub	objptr, #32
+	rdlong	arg02, objptr
+' ' return max of a or b
+'     nMax := (a > b) ? a : b
+	cmps	arg01, arg02 wcz
+ if_a	mov	result1, arg01
+ if_be	mov	result1, arg02
+	wrlong	result1, objptr
+'         tvMaxFps_x10 := max(ftPerSec_x10, tvMaxFps_x10)
+	add	objptr, #36
+	rdlong	arg01, objptr
+	sub	objptr, #48
+	rdlong	arg02, objptr
+' ' return max of a or b
+'     nMax := (a > b) ? a : b
+	cmps	arg01, arg02 wcz
+ if_a	mov	result1, arg01
+ if_be	mov	result1, arg02
+	wrlong	result1, objptr
+'         tvMaxMPH_x10 := max(mph_x10, tvMaxMPH_x10)
+	add	objptr, #56
+	rdlong	arg01, objptr
+	sub	objptr, #52
+	rdlong	arg02, objptr
+' ' return max of a or b
+'     nMax := (a > b) ? a : b
+	cmps	arg01, arg02 wcz
+ if_a	mov	result1, arg01
+ if_be	mov	result1, arg02
+	wrlong	result1, objptr
+'         tvMaxkPH_x10 := max(kmh_x10, tvMaxkPH_x10)
+	add	objptr, #48
+	rdlong	arg01, objptr
+	sub	objptr, #44
+	rdlong	arg02, objptr
+' ' return max of a or b
+'     nMax := (a > b) ? a : b
+	cmps	arg01, arg02 wcz
+ if_a	mov	result1, arg01
+ if_be	mov	result1, arg02
+	wrlong	result1, objptr
+	sub	objptr, ##675
+	mov	ptra, fp
+	call	#popregs_
+_isp_bldc_motor_updateHdmiData_ret
+	ret
+
+' 
+' PUB circInMMforDiaInInchFloat(fDiaInch) : nCircInMM | fValue
+_isp_dist_utils_circInMMforDiaInInchFloat
+	mov	COUNT_, #1
+	call	#pushregs_
+' '' Return circumference in mm for given diameter in inch
+'     ' RULE: circ = 2 * pi * r
+'     nCircInMM := 0
+	mov	local01, #0
+'     if fDiaInch <> 0.0
+	cmp	arg01, #0 wz
+ if_e	jmp	#LR__0260
+'         fValue := fDiaInch *. kPI
+	mov	arg02, ##1078530000
+	call	#__system___float_mul
+	mov	arg01, result1
+'         nCircInMM := trunc(fValue *. kMM_IN_INCH)
+	mov	arg02, ##1103835955
+	call	#__system___float_mul
+	mov	arg01, result1
+	mov	arg02, #0
+	call	#__system___float_tointeger
+	mov	local01, result1
+LR__0260
+	mov	result1, local01
+	mov	ptra, fp
+	call	#popregs_
+_isp_dist_utils_circInMMforDiaInInchFloat_ret
+	ret
+hubexit
+	jmp	#cogexit
+
+__system___getms
+	getct	result2 wc
+	getct	_var01
+	add	ptr___system__dat__, #12
+	rdlong	_var02, ptr___system__dat__ wz
+	sub	ptr___system__dat__, #12
+ if_ne	jmp	#LR__0270
+	rdlong	_var02, #20
+	qdiv	_var02, ##1000
+	add	ptr___system__dat__, #12
+	getqx	result1
+	mov	_var02, result1
+	wrlong	result1, ptr___system__dat__
+	sub	ptr___system__dat__, #12
+LR__0270
+	setq	result2
+	qdiv	_var01, _var02
+	getqx	result1
+__system___getms_ret
+	ret
+
+__system____builtin_memmove
+	mov	result1, arg01
+	cmps	arg01, arg02 wc
+ if_b	jmp	#LR__0280
+	mov	_var01, arg02
+	add	_var01, arg03
+	cmps	arg01, _var01 wc
+ if_b	jmp	#LR__0286
+LR__0280
+	mov	_var02, arg03
+	shr	_var02, #2 wz
+ if_e	jmp	#LR__0285
+	callpa	#(@LR__0283-@LR__0281)>>2,fcache_load_ptr_
+LR__0281
+	rep	@LR__0284, _var02
+LR__0282
+	rdlong	_var01, arg02
+	wrlong	_var01, arg01
+	add	arg01, #4
+	add	arg02, #4
+LR__0283
+LR__0284
+LR__0285
+	test	arg03, #2 wz
+ if_ne	rdword	_var01, arg02
+ if_ne	wrword	_var01, arg01
+ if_ne	add	arg01, #2
+ if_ne	add	arg02, #2
+	test	arg03, #1 wz
+ if_ne	rdbyte	_var01, arg02
+ if_ne	wrbyte	_var01, arg01
+	jmp	#LR__0292
+LR__0286
+	add	arg01, arg03
+	add	arg02, arg03
+	mov	_var03, arg03 wz
+ if_e	jmp	#LR__0291
+	callpa	#(@LR__0289-@LR__0287)>>2,fcache_load_ptr_
+LR__0287
+	rep	@LR__0290, _var03
+LR__0288
+	sub	arg01, #1
+	sub	arg02, #1
+	rdbyte	_var01, arg02
+	wrbyte	_var01, arg01
+LR__0289
+LR__0290
+LR__0291
+LR__0292
+__system____builtin_memmove_ret
+	ret
+
+__system__longmove
+	mov	result1, arg01
+	cmps	arg01, arg02 wc
+ if_ae	jmp	#LR__0304
+	mov	_var01, arg03 wz
+ if_e	jmp	#LR__0310
+	callpa	#(@LR__0302-@LR__0300)>>2,fcache_load_ptr_
+LR__0300
+	rep	@LR__0303, _var01
+LR__0301
+	rdlong	_var01, arg02
+	wrlong	_var01, arg01
+	add	arg01, #4
+	add	arg02, #4
+LR__0302
+LR__0303
+	jmp	#LR__0310
+LR__0304
+	mov	_var02, arg03
+	shl	_var02, #2
+	add	arg01, _var02
+	add	arg02, _var02
+	mov	_var03, arg03 wz
+ if_e	jmp	#LR__0309
+	callpa	#(@LR__0307-@LR__0305)>>2,fcache_load_ptr_
+LR__0305
+	rep	@LR__0308, _var03
+LR__0306
+	sub	arg01, #4
+	sub	arg02, #4
+	rdlong	_var03, arg02
+	wrlong	_var03, arg01
+LR__0307
+LR__0308
+LR__0309
+LR__0310
+__system__longmove_ret
+	ret
+
+__system___lookup
+	sub	arg01, arg02
+	cmps	arg01, #0 wc
+ if_b	jmp	#LR__0320
+	cmps	arg01, arg04 wc
+ if_b	mov	_var01, arg01
+ if_b	shl	_var01, #2
+ if_b	add	_var01, arg03
+ if_b	rdlong	result1, _var01
+ if_b	jmp	#__system___lookup_ret
+LR__0320
+	mov	result1, #0
+__system___lookup_ret
+	ret
+
+__system___lookdown
+	mov	_var01, #0
+	sub	arg04, #1
+	cmps	arg04, #0 wc
+	negc	_var02, #1
+	add	arg04, _var02
+LR__0330
+	rdlong	_var03, arg03
+	cmp	_var03, arg01 wz
+ if_e	mov	result1, _var01
+ if_e	add	result1, arg02
+ if_e	jmp	#__system___lookdown_ret
+	add	arg03, #4
+	add	_var01, _var02
+	cmp	_var01, arg04 wz
+ if_ne	jmp	#LR__0330
+	mov	result1, #0
+__system___lookdown_ret
+	ret
+
+__system____builtin_strncpy
+	mov	COUNT_, #2
+	call	#pushregs_
+	mov	local01, arg01
+	mov	arg01, arg02
+	mov	local02, arg01
+	callpa	#(@LR__0341-@LR__0340)>>2,fcache_load_ptr_
+LR__0340
+	rdbyte	result1, local02 wz
+ if_ne	add	local02, #1
+ if_ne	jmp	#LR__0340
+LR__0341
+	sub	local02, arg01
+	fles	local02, arg03
+	mov	arg01, local01
+	mov	arg03, local02
+	call	#__system____builtin_memmove
+	add	local02, local01
+	wrbyte	#0, local02
+	mov	result1, local01
+	mov	ptra, fp
+	call	#popregs_
+__system____builtin_strncpy_ret
+	ret
+
+__system___waitms
+	mov	_var01, arg01
+	getct	_var02
+	rdlong	_var03, #20
+	callpa	#(@LR__0351-@LR__0350)>>2,fcache_load_ptr_
+LR__0350
+	cmps	_var01, ##1000 wc
+ if_b	jmp	#LR__0352
+	add	_var02, _var03
+	mov	arg01, _var02
+	addct1	arg01, #0
+	waitct1
+	sub	_var01, ##1000
+	jmp	#LR__0350
+LR__0351
+LR__0352
+	cmps	_var01, #1 wc
+ if_b	jmp	#LR__0353
+	qmul	_var01, _var03
+	mov	arg03, ##1000
+	getqy	result1
+	getqx	arg01
+	setq	result1
+	qdiv	arg01, arg03
+	getqx	arg01
+	addct1	arg01, _var02
+	waitct1
+LR__0353
+__system___waitms_ret
+	ret
+
+__system___float_fromuns
+	mov	arg03, arg01 wz
+ if_e	mov	result1, arg03
+ if_e	jmp	#LR__0360
+	encod	arg02, arg03 wc
+ if_b	add	arg02, #1
+	sub	arg02, #1
+	mov	arg01, #31
+	sub	arg01, arg02
+	shl	arg03, arg01
+	shr	arg03, #2
+	mov	arg01, #0
+	call	#__system___float_Pack
+LR__0360
+__system___float_fromuns_ret
+	ret
+
+__system___float_mul
+	mov	COUNT_, #12
+	call	#pushregs_
+	mov	local01, arg01
+	mov	local02, arg02
+	mov	local03, local01
+	mov	local04, local03
+	zerox	local04, #22
+	mov	local05, local03
+	shl	local05, #1
+	shr	local05, #24
+	shr	local03, #31
+	mov	result1, local02
+	mov	local06, result1
+	mov	local07, local06
+	zerox	local07, #22
+	mov	local08, local06
+	shl	local08, #1
+	shr	local08, #24
+	shr	local06, #31
+	xor	local03, local06
+	cmp	local05, #255 wz
+ if_e	jmp	#LR__0373
+	cmp	local08, #255 wz
+ if_e	jmp	#LR__0375
+	cmp	local05, #0 wz
+ if_e	jmp	#LR__0376
+	bith	local04, #23
+LR__0370
+	cmp	local08, #0 wz
+ if_e	jmp	#LR__0380
+	bith	local07, #23
+LR__0371
+	shl	local04, #4
+	shl	local07, #5
+	qmul	local04, local07
+	mov	local09, local05
+	add	local09, local08
+	sub	local09, #254
+	getqx	local10
+	getqy	local11
+	cmp	local11, ##16777216 wc
+ if_b	jmp	#LR__0372
+	add	local09, #1
+	shr	local10, #1
+	mov	local08, local11
+	shl	local08, #31
+	or	local10, local08
+	shr	local11, #1
+LR__0372
+	mov	arg01, local11
+	mov	arg02, local10
+	mov	arg03, local09
+	mov	arg04, local03
+	call	#__system__pack_0116
+	jmp	#LR__0384
+LR__0373
+	cmp	local04, #0 wz
+ if_ne	mov	result1, local01
+ if_ne	jmp	#LR__0384
+	cmps	local08, #255 wc
+ if_b	cmp	local08, #0 wz
+ if_c_and_z	cmp	local07, #0 wz
+ if_c_and_nz	jmp	#LR__0374
+ if_b	mov	result1, ##2146435072
+ if_b	jmp	#LR__0384
+	cmp	local07, #0 wz
+ if_ne	mov	result1, local02
+ if_ne	jmp	#LR__0384
+LR__0374
+	or	local03, #2
+	mov	arg01, #0
+	mov	arg02, #0
+	mov	arg03, local05
+	mov	arg04, local03
+	call	#__system__pack_0116
+	jmp	#LR__0384
+LR__0375
+	cmp	local05, #0 wz
+ if_e	cmp	local04, #0 wz
+ if_e	mov	result1, ##2146435072
+ if_e	jmp	#LR__0384
+	cmp	local07, #0 wz
+ if_ne	mov	result1, local02
+ if_ne	jmp	#LR__0384
+	mov	arg04, local03
+	or	arg04, #2
+	mov	arg03, local08
+	mov	arg01, #0
+	mov	arg02, #0
+	call	#__system__pack_0116
+	jmp	#LR__0384
+LR__0376
+	cmp	local04, #0 wz
+ if_e	jmp	#LR__0379
+	callpa	#(@LR__0378-@LR__0377)>>2,fcache_load_ptr_
+LR__0377
+	shl	local04, #1
+	cmp	local04, ##8388608 wc
+ if_b	mov	local12, local05
+ if_b	sub	local12, #1
+ if_b	mov	local05, local12
+ if_b	jmp	#LR__0377
+LR__0378
+	jmp	#LR__0370
+LR__0379
+	or	local03, #8
+	mov	arg01, #0
+	mov	arg02, #0
+	mov	arg03, #0
+	mov	arg04, local03
+	call	#__system__pack_0116
+	jmp	#LR__0384
+LR__0380
+	cmp	local07, #0 wz
+ if_e	jmp	#LR__0383
+	callpa	#(@LR__0382-@LR__0381)>>2,fcache_load_ptr_
+LR__0381
+	shl	local07, #1
+	cmp	local07, ##8388608 wc
+ if_b	sub	local08, #1
+ if_b	jmp	#LR__0381
+LR__0382
+	jmp	#LR__0371
+LR__0383
+	or	local03, #8
+	mov	arg01, #0
+	mov	arg02, #0
+	mov	arg03, #0
+	mov	arg04, local03
+	call	#__system__pack_0116
+LR__0384
+	mov	ptra, fp
+	call	#popregs_
+__system___float_mul_ret
+	ret
+
+__system___float_div
+	mov	COUNT_, #22
+	call	#pushregs_
+	mov	local03, arg01
+	mov	local04, arg02
+	mov	local05, local03
+	mov	local06, local05
+	shl	local06, #9
+	mov	local07, local06
+	shr	local07, #9
+	mov	local08, local07
+	mov	local09, local05
+	shl	local09, #1
+	mov	local10, local09
+	shr	local10, #24
+	mov	local11, local10
+	shr	local05, #31
+	mov	result1, local04
+	mov	local12, result1
+	mov	local13, local12
+	shl	local13, #9
+	mov	local14, local13
+	shr	local14, #9
+	mov	local15, local14
+	mov	local16, local12
+	shl	local16, #1
+	mov	local17, local16
+	shr	local17, #24
+	mov	local18, local17
+	shr	local12, #31
+	xor	local05, local12
+	cmp	local11, #255 wz
+ if_e	jmp	#LR__0395
+	cmp	local18, #255 wz
+ if_e	jmp	#LR__0396
+	cmp	local11, #0 wz
+ if_e	jmp	#LR__0397
+	bith	local08, #23
+LR__0390
+	cmp	local18, #0 wz
+ if_e	jmp	#LR__0401
+	bith	local15, #23
+LR__0391
+	mov	local19, local11
+	sub	local19, local18
+	mov	arg01, local08
+	shr	arg01, #2
+	mov	arg02, local08
+	shl	arg02, #30
+	mov	arg03, local15
+	setq	arg01
+	qdiv	arg02, arg03
+	mov	local20, #0
+	getqx	local01
+	getqy	result2
+	mov	local02, result2
+	mov	local21, local01
+	cmps	local02, #0 wz
+	mov	local22, local21
+	shl	local22, #25
+ if_ne	mov	local20, #1
+	or	local22, local20
+	shr	local21, #7
+	cmp	local21, ##16777216 wc
+ if_b	jmp	#LR__0392
+	add	local19, #1
+	shr	local22, #1
+	mov	local20, local21
+	shl	local20, #31
+	or	local22, local20
+	shr	local21, #1
+	jmp	#LR__0394
+LR__0392
+	cmp	local21, ##8388608 wc
+ if_ae	jmp	#LR__0393
+	sub	local19, #1
+	shl	local21, #1
+	mov	local20, local22
+	shr	local20, #31
+	or	local21, local20
+	shl	local22, #1
+LR__0393
+LR__0394
+	mov	arg01, local21
+	mov	arg02, local22
+	mov	arg03, local19
+	mov	arg04, local05
+	call	#__system__pack_0116
+	jmp	#LR__0405
+LR__0395
+	cmp	local08, #0 wz
+ if_ne	mov	result1, local03
+ if_ne	jmp	#LR__0405
+	cmp	local18, #255 wz
+ if_e	mov	result1, ##2146435072
+ if_e	jmp	#LR__0405
+	or	local05, #2
+	mov	arg01, #0
+	mov	arg02, #0
+	mov	arg03, local11
+	mov	arg04, local05
+	call	#__system__pack_0116
+	jmp	#LR__0405
+LR__0396
+	cmp	local15, #0 wz
+ if_ne	mov	result1, local04
+ if_ne	jmp	#LR__0405
+	mov	arg04, local05
+	or	arg04, #8
+	mov	arg01, #0
+	mov	arg02, #0
+	mov	arg03, #0
+	call	#__system__pack_0116
+	jmp	#LR__0405
+LR__0397
+	cmp	local08, #0 wz
+ if_e	jmp	#LR__0400
+	callpa	#(@LR__0399-@LR__0398)>>2,fcache_load_ptr_
+LR__0398
+	shl	local08, #1
+	cmp	local08, ##8388608 wc
+ if_b	sub	local11, #1
+ if_b	jmp	#LR__0398
+LR__0399
+	jmp	#LR__0390
+LR__0400
+	cmp	local18, #0 wz
+ if_e	cmp	local15, #0 wz
+ if_e	mov	result1, ##2146435072
+ if_e	jmp	#LR__0405
+	mov	arg04, local05
+	or	arg04, #8
+	mov	arg01, #0
+	mov	arg02, #0
+	mov	arg03, #0
+	call	#__system__pack_0116
+	jmp	#LR__0405
+LR__0401
+	cmp	local15, #0 wz
+ if_e	jmp	#LR__0404
+	callpa	#(@LR__0403-@LR__0402)>>2,fcache_load_ptr_
+LR__0402
+	shl	local15, #1
+	cmp	local15, ##8388608 wc
+ if_b	sub	local18, #1
+ if_b	jmp	#LR__0402
+LR__0403
+	jmp	#LR__0391
+LR__0404
+	or	local05, #2
+	mov	arg01, #0
+	mov	arg02, #0
+	mov	arg03, #0
+	mov	arg04, local05
+	call	#__system__pack_0116
+LR__0405
+	mov	ptra, fp
+	call	#popregs_
+__system___float_div_ret
+	ret
+
+__system___float_tointeger
+	mov	COUNT_, #2
+	call	#pushregs_
+	call	#__system___float_Unpack
+	mov	local01, result1
+	cmps	result2, #31 wc
+ if_ae	cmp	local01, #0 wz
+ if_a	decod	local02, #31
+ if_nc_and_z	bmask	local02, #30
+ if_ae	mov	result3, local02
+ if_ae	jmp	#LR__0411
+	cmps	result2, ##-1 wc
+ if_b	mov	result3, #0
+ if_b	jmp	#LR__0410
+	shl	result3, #2
+	mov	local02, #30
+	sub	local02, result2
+	shr	result3, local02
+	add	result3, arg02
+	shr	result3, #1
+	cmp	local01, #0 wz
+ if_ne	neg	result3, result3
+LR__0410
+LR__0411
+	mov	result1, result3
+	mov	ptra, fp
+	call	#popregs_
+__system___float_tointeger_ret
+	ret
+
+__system___float_Unpack
+	mov	result1, arg01
+	shr	result1, #31
+	mov	result2, arg01
+	shl	result2, #1
+	shr	result2, #24 wz
+	bitl	arg01, #279
+ if_ne	shl	arg01, #6
+ if_ne	bith	arg01, #29
+ if_ne	jmp	#LR__0420
+	encod	_var01, arg01 wc
+ if_b	add	_var01, #1
+	sub	_var01, #23
+	mov	result2, _var01
+	mov	result3, #7
+	sub	result3, _var01
+	shl	arg01, result3
+LR__0420
+	sub	result2, #127
+	mov	result3, arg01
+__system___float_Unpack_ret
+	ret
+
+__system___float_Pack
+	mov	_var01, #0
+	cmp	arg03, #0 wz
+ if_e	jmp	#LR__0431
+	encod	_var02, arg03 wc
+ if_b	add	_var02, #1
+	mov	_var01, #33
+	sub	_var01, _var02
+	shl	arg03, _var01
+	mov	_var02, #3
+	sub	_var02, _var01
+	add	arg02, _var02
+	add	arg03, #256
+	mov	_var02, arg03
+	andn	_var02, #255 wz
+ if_e	add	arg02, #1
+	add	arg02, #127
+	fges	arg02, ##-23
+	fles	arg02, #255
+	cmps	arg02, #1 wc
+ if_ae	jmp	#LR__0430
+	shr	arg03, #1
+	decod	_var02, #31
+	add	_var02, arg03
+	neg	arg02, arg02
+	shr	_var02, arg02
+	mov	arg03, _var02
+	mov	arg02, #0
+LR__0430
+	shl	arg01, #31
+	mov	result1, arg01
+	shl	arg02, #23
+	or	result1, arg02
+	shr	arg03, #9
+	or	result1, arg03
+	jmp	#__system___float_Pack_ret
+LR__0431
+	mov	result1, _var01
+__system___float_Pack_ret
+	ret
+
+__system__pack_0116
+	mov	_var01, arg01
+	add	arg03, #127
+	test	arg04, #4 wz
+ if_e	jmp	#LR__0440
+	cmp	_var01, #0 wz
+ if_e	decod	_var01, #22
+	bith	_var01, #247
+	jmp	#LR__0449
+LR__0440
+	test	arg04, #2 wz
+ if_ne	mov	_var01, ##2139095040
+ if_ne	mov	arg02, #0
+ if_ne	jmp	#LR__0448
+	test	arg04, #8 wz
+ if_ne	mov	_var01, #0
+ if_ne	jmp	#LR__0447
+	cmps	arg03, #255 wc
+ if_ae	mov	_var01, ##2139095040
+ if_ae	mov	arg02, #0
+ if_ae	jmp	#LR__0446
+	cmps	arg03, #1 wc
+ if_ae	jmp	#LR__0444
+	shr	arg02, #1
+	mov	_var02, _var01
+	and	_var02, #1
+	shl	_var02, #31
+	callpa	#(@LR__0442-@LR__0441)>>2,fcache_load_ptr_
+LR__0441
+	or	arg02, _var02
+	shr	_var01, #1
+	cmps	arg03, #0 wc
+ if_ae	jmp	#LR__0443
+	cmp	_var01, #0 wz
+ if_e	jmp	#LR__0443
+	mov	_var02, arg02
+	and	_var02, #1
+	add	arg03, #1
+	shr	arg02, #1
+	mov	arg01, _var01
+	and	arg01, #1
+	shl	arg01, #31
+	or	arg02, arg01
+	jmp	#LR__0441
+LR__0442
+LR__0443
+	cmps	arg03, #0 wc
+ if_ae	jmp	#LR__0445
+	cmp	arg02, #0 wz
+	wrnz	arg02
+	jmp	#LR__0445
+LR__0444
+	bitl	_var01, #279
+	shl	arg03, #23
+	or	_var01, arg03
+LR__0445
+LR__0446
+LR__0447
+LR__0448
+LR__0449
+	test	_var01, #1 wz
+ if_ne	or	arg02, #1
+	mov	_var02, arg02
+	mov	arg03, #0
+	add	arg02, ##2147483647
+	cmp	arg02, _var02 wc
+ if_b	mov	arg03, #1
+	add	_var01, arg03
+	test	arg04, #1 wz
+ if_ne	bith	_var01, #31
+	mov	result1, _var01
+__system__pack_0116_ret
+	ret
+
+LR__0450
+	byte	"ltMot"
+	byte	0
+LR__0451
+	byte	"rtMot"
+	byte	0
+LR__0452
+	byte	"ltMot"
+	byte	0
+LR__0453
+	byte	"rtMot"
+	byte	0
+LR__0454
+	byte	"ltMot"
+	byte	0
+LR__0455
+	byte	"rtMot"
+	byte	0
+LR__0456
+	byte	"ltMot"
+	byte	0
+LR__0457
+	byte	"rtMot"
+	byte	0
+	alignl
+_isp_steering_2wheel_dat_
+'-' 
+'-' ltFaultSeenMS    long  0
+	byte	$00, $00, $00, $00
+'-' rtFaultSeenMS    long  0
+	byte	$00, $00, $00, $00
+'-' 
+'-'     dsUnknown       BYTE    "dsUnk",0
+	byte	$64, $73, $55, $6e, $6b, $00
+'-'     dsMOVING        BYTE    "dsMov",0
+	byte	$64, $73, $4d, $6f, $76, $00
+'-'     dsHOLDING       BYTE    "dsHld",0
+	byte	$64, $73, $48, $6c, $64, $00
+'-'     dsOFF           BYTE    "dsOff",0
+	byte	$64, $73, $4f, $66, $66, $00
+'-'     dsOther         BYTE    "?ds0x"
+	byte	$3f, $64, $73, $30, $78
+'-'     dsOtherVal      BYTE    "00-[CODE]?",0
+	byte	$30, $30, $2d, $5b, $43, $4f, $44, $45, $5d, $3f, $00
+'-' 
+'-'     dcsUnknown      BYTE    "dcsUnk",0
+	byte	$64, $63, $73, $55, $6e, $6b, $00
+'-'     dcsSTOPPED      BYTE    "dcsSTOPPED",0
+	byte	$64, $63, $73, $53, $54, $4f, $50, $50, $45, $44, $00
+'-'     dcsSPIN_UP      BYTE    "dcsSPIN_UP",0
+	byte	$64, $63, $73, $53, $50, $49, $4e, $5f, $55, $50, $00
+'-'     dcsAT_SPEED     BYTE    "dcsAT_SPEED",0
+	byte	$64, $63, $73, $41, $54, $5f, $53, $50, $45, $45, $44, $00
+'-'     dcsSPIN_DN      BYTE    "dcsSPIN_DN",0
+	byte	$64, $63, $73, $53, $50, $49, $4e, $5f, $44, $4e, $00
+'-'     dcsSLOW_TO_CHG  BYTE    "dcsSLOW_TO_CHG",0
+	byte	$64, $63, $73, $53, $4c, $4f, $57, $5f, $54, $4f, $5f, $43, $48, $47, $00
+'-'     dcsFAULTED      BYTE    "dcsFAULTED",0
+	byte	$64, $63, $73, $46, $41, $55, $4c, $54, $45, $44, $00
+'-'     dcsESTOP        BYTE    "dcsESTOP",0
+	byte	$64, $63, $73, $45, $53, $54, $4f, $50, $00
+'-'     dcsOther        BYTE    "?dcs0x"
+	byte	$3f, $64, $63, $73, $30, $78
+'-'     dcsOtherVal     BYTE    "00-[CODE]?",0
+	byte	$30, $30, $2d, $5b, $43, $4f, $44, $45, $5d, $3f, $00
+'-' 
+'-'     pStatVal        LONG    0
+	byte	$00, $00, $00, $00
+'-'     priorLtStatus   LONG    -1
+	byte	$ff, $ff, $ff, $ff
+'-'     priorRtStatus   LONG    -1
+	byte	$ff, $ff, $ff, $ff
+'-'     priorLtState    LONG    -1
+	byte	$ff, $ff, $ff, $ff
+'-'     priorRtState    LONG    -1
+	byte	$ff, $ff, $ff, $ff
+'-'     priorLtFault   LONG    -3
+	byte	$fd, $ff, $ff, $ff
+'-'     priorRtFault   LONG    -3
+	byte	$fd, $ff, $ff, $ff
+'-' 
+'-' showHDMIDebug   LONG    FALSE
+	byte	$00, $00, $00, $00
+'-' 
+'-' ' user stearing data
+'-' '---+-----------+---+---+---+-------------------+---+---+---+---+---+-----------+
+'-' nameTitle1      BYTE    "Steering",0
+	byte	$53, $74, $65, $65, $72, $69, $6e, $67, $00
+'-' name10          BYTE    "power",0
+	byte	$70, $6f, $77, $65, $72, $00
+'-' name11          BYTE    "direc.",0
+	byte	$64, $69, $72, $65, $63, $2e, $00
+'-' name12          BYTE    "ltPwr",0
+	byte	$6c, $74, $50, $77, $72, $00
+'-' name13          BYTE    "rtPwr",0
+	byte	$72, $74, $50, $77, $72, $00
+'-' name14          BYTE    "stpTck",0
+	byte	$73, $74, $70, $54, $63, $6b, $00
+'-' name15          BYTE    "stpmSec",0
+	byte	$73, $74, $70, $6d, $53, $65, $63, $00
+'-' name16          BYTE    "Cutoff",0
+	byte	$43, $75, $74, $6f, $66, $66, $00
+'-' nextAddr1
+'-' dataLen1        LONG    @nextAddr1 - @nameTitle1
+	byte	$38, $00, $00, $00
+	alignl
+_isp_bldc_motor_dat_
+'-' 
+'-'     ' time constants based on CPU freq
+'-'     ticks1ms    LONG    0
+	byte	$00, $00, $00, $00
+'-'     ticks1us    LONG    0
+	byte	$00, $00, $00, $00
+'-'     ticks500us  long    0                       ' 2 kHz
+	byte	$00, $00, $00, $00
+'-'     ticks125ms  long    0                       ' 8 Hz
+	byte	$00, $00, $00, $00
+'-' 
+'-' ' motor drive data
+'-'     nameTitle1  BYTE    "Motor Drive",0
+	byte	$4d, $6f, $74, $6f, $72, $20, $44, $72, $69, $76, $65, $00
+'-'     name10      BYTE    "hall",0
+	byte	$68, $61, $6c, $6c, $00
+'-'     name11      BYTE    "pos",0
+	byte	$70, $6f, $73, $00
+'-'     name12      BYTE    "duty",0
+	byte	$64, $75, $74, $79, $00
+'-'     name13      BYTE    "err",0
+	byte	$65, $72, $72, $00
+'-'     name14      BYTE    "lpTicks",0
+	byte	$6c, $70, $54, $69, $63, $6b, $73, $00
+'-'     name15      BYTE    "state",0
+	byte	$73, $74, $61, $74, $65, $00
+'-'     name16      BYTE    "FAULT",0
+	byte	$46, $41, $55, $4c, $54, $00
+'-' nextAddr1
+'-'     dataLen1     LONG    @nextAddr1 - @nameTitle1
+	byte	$32, $00, $00, $00
+'-' 
+'-' ' motor sense data
+'-'     nameTitle2  BYTE    "Motor Sense",0
+	byte	$4d, $6f, $74, $6f, $72, $20, $53, $65, $6e, $73, $65, $00
+'-'     name20      BYTE    "RPM10th",0
+	byte	$52, $50, $4d, $31, $30, $74, $68, $00
+'-'     name21      BYTE    "RPM",0
+	byte	$52, $50, $4d, $00
+'-'     name22      BYTE    "cts/sec",0
+	byte	$63, $74, $73, $2f, $73, $65, $63, $00
+'-'     name23      BYTE    "delta",0
+	byte	$64, $65, $6c, $74, $61, $00
+'-'     name24      BYTE    "Amp",0
+	byte	$41, $6d, $70, $00
+'-'     name25      BYTE    "maxAmp",0
+	byte	$6d, $61, $78, $41, $6d, $70, $00
+'-'     name26      BYTE    "RPMb10",0
+	byte	$52, $50, $4d, $62, $31, $30, $00
+'-' nextAddr2
+'-'     dataLen2     LONG    @nextAddr2 - @nameTitle2
+	byte	$38, $00, $00, $00
+'-' 
+'-' ' motor rate  data
+'-'     nameTitle3  BYTE    "Motor Rate(.1)",0
+	byte	$4d, $6f, $74, $6f, $72, $20, $52, $61, $74, $65, $28, $2e, $31, $29, $00
+'-'     name30      BYTE    "RPM",0
+	byte	$52, $50, $4d, $00
+'-'     name31      BYTE    "cts/sec",0
+	byte	$63, $74, $73, $2f, $73, $65, $63, $00
+'-'     name32      BYTE    "mAmp",0
+	byte	$6d, $41, $6d, $70, $00
+'-'     name33      BYTE    "mWatt",0
+	byte	$6d, $57, $61, $74, $74, $00
+'-'     name34      BYTE    "kM/H",0
+	byte	$6b, $4d, $2f, $48, $00
+'-'     name35      BYTE    "mm/s",0
+	byte	$6d, $6d, $2f, $73, $00
+'-'     name36      BYTE    "Ang/10k",0
+	byte	$41, $6e, $67, $2f, $31, $30, $6b, $00
+'-' nextAddr3
+'-'     dataLen3     LONG    @nextAddr3 - @nameTitle3
+	byte	$38, $00, $00, $00
+'-' 
+'-' ' These table represent contants for use in BLDC pasm driver
+'-' '  tables specific to a given motor are copied into pasm driver image
+'-' '  before the driver is started
+'-' '
+'-' ' old bit shift up by 3 then new bits
+'-' '   old is outer index
+'-' '   new is inner index
+'-' 
+'-' deltas65    BYTE    0, 0, 0, 0, 0, 0, 0, 0  ' Hall-effect-sensor position deltas from (old<<3 | new)
+	byte	$00, $00, $00, $00, $00, $00, $00, $00
+'-'             BYTE    0, 0, 0,-1, 0, 1, 0, 0
+	byte	$00, $00, $00, $ff, $00, $01, $00, $00
+'-'             BYTE    0, 0, 0, 1, 0, 0,-1, 0
+	byte	$00, $00, $00, $01, $00, $00, $ff, $00
+'-'             BYTE    0, 1,-1, 0, 0, 0, 0, 0
+	byte	$00, $01, $ff, $00, $00, $00, $00, $00
+'-'             BYTE    0, 0, 0, 0, 0,-1, 1, 0
+	byte	$00, $00, $00, $00, $00, $ff, $01, $00
+'-'             BYTE    0,-1, 0, 0, 1, 0, 0, 0
+	byte	$00, $ff, $00, $00, $01, $00, $00, $00
+'-'             BYTE    0, 0, 1, 0,-1, 0, 0, 0
+	byte	$00, $00, $01, $00, $ff, $00, $00, $00
+'-'             BYTE    0, 0, 0, 0, 0, 0, 0, 0
+	byte	$00, $00, $00, $00, $00, $00, $00, $00
+'-' 
+'-' deltas4k    BYTE    0, 0, 0, 0, 0, 0, 0, 0  ' old=0 - Hall-effect-sensor position deltas from (old<<3 | new)
+	byte	$00, $00, $00, $00, $00, $00, $00, $00
+'-'             BYTE    0, 0, 0,-1, 0, 1, 0, 0  ' old=1
+	byte	$00, $00, $00, $ff, $00, $01, $00, $00
+'-'             BYTE    0, 0, 0, 1, 0, 0,-1, 0  ' old=2
+	byte	$00, $00, $00, $01, $00, $00, $ff, $00
+'-'             BYTE    0, 1,-1, 0, 0, 0, 0, 0  ' old=3
+	byte	$00, $01, $ff, $00, $00, $00, $00, $00
+'-'             BYTE    0, 0, 0, 0, 0,-1, 1, 0  ' old=4
+	byte	$00, $00, $00, $00, $00, $ff, $01, $00
+'-'             BYTE    0,-1, 0, 0, 1, 0, 0, 0  ' old=5
+	byte	$00, $ff, $00, $00, $01, $00, $00, $00
+'-'             BYTE    0, 0, 1, 0,-1, 0, 0, 0  ' old=6
+	byte	$00, $00, $01, $00, $ff, $00, $00, $00
+'-'             BYTE    0, 0, 0, 0, 0, 0, 0, 0  ' old=7
+	byte	$00, $00, $00, $00, $00, $00, $00, $00
+'-' 
+'-' '   amount of rotation within hall cycle - 6.5" wheel
+'-' hltbAngles  LONG    0           '-%000- can't happen forward-direction table
+	byte	$00, $00, $00, $00
+'-'             LONG    0 frac 6    '%001
+	byte	$00, $00, $00, $00
+'-'             LONG    4 frac 6    '%010
+	byte	$aa, $aa, $aa, $aa
+'-'             LONG    5 frac 6    '%011
+	byte	$55, $55, $55, $d5
+'-'             LONG    2 frac 6    '%100
+	byte	$55, $55, $55, $55
+'-'             LONG    1 frac 6    '%101
+	byte	$aa, $aa, $aa, $2a
+'-'             LONG    3 frac 6    '%110
+	byte	$00, $00, $00, $80
+'-'             LONG    0           '-%111- can't happen
+	byte	$00, $00, $00, $00
+'-' 
+'-' hltbAngle2  LONG    0           '-%000- can't happen - reverse-direction table
+	byte	$00, $00, $00, $00
+'-'             LONG    5 frac 6    '%001
+	byte	$55, $55, $55, $d5
+'-'             LONG    3 frac 6    '%010
+	byte	$00, $00, $00, $80
+'-'             LONG    4 frac 6    '%011
+	byte	$aa, $aa, $aa, $aa
+'-'             LONG    1 frac 6    '%100
+	byte	$aa, $aa, $aa, $2a
+'-'             LONG    0 frac 6    '%101
+	byte	$00, $00, $00, $00
+'-'             LONG    2 frac 6    '%110
+	byte	$55, $55, $55, $55
+'-'             LONG    0           '-%111- can't happen
+	byte	$00, $00, $00, $00
+'-' 
+'-' 
+'-' '   amount of rotation within hall cycle - docoEng.com 4kRPM, 24V
+'-' hltbAngl4k  LONG    0           '-%000- can't happen - forward-direction table
+	byte	$00, $00, $00, $00
+'-'             LONG    5 frac 6    '%001
+	byte	$55, $55, $55, $d5
+'-'             LONG    3 frac 6    '%010
+	byte	$00, $00, $00, $80
+'-'             LONG    4 frac 6    '%011
+	byte	$aa, $aa, $aa, $aa
+'-'             LONG    1 frac 6    '%100
+	byte	$aa, $aa, $aa, $2a
+'-'             LONG    0 frac 6    '%101
+	byte	$00, $00, $00, $00
+'-'             LONG    2 frac 6    '%110
+	byte	$55, $55, $55, $55
+'-'             LONG    0           '-%111- can't happen
+	byte	$00, $00, $00, $00
+'-' 
+'-' hltbAngl4k2 LONG    0           '-%000- can't happen - reverse-direction table
+	byte	$00, $00, $00, $00
+'-'             LONG    0 frac 6    '%001
+	byte	$00, $00, $00, $00
+'-'             LONG    4 frac 6    '%010
+	byte	$aa, $aa, $aa, $aa
+'-'             LONG    5 frac 6    '%011
+	byte	$55, $55, $55, $d5
+'-'             LONG    2 frac 6    '%100
+	byte	$55, $55, $55, $55
+'-'             LONG    1 frac 6    '%101
+	byte	$aa, $aa, $aa, $2a
+'-'             LONG    3 frac 6    '%110
+	byte	$00, $00, $00, $80
+'-'             LONG    0           '-%111- can't happen
+	byte	$00, $00, $00, $00
+'-' '
+'-' ' PASM Driver Program
+'-' '
+'-'                 org     0
+	byte	$00, $00
+'-' 
+'-' driver          mov     drv_state_, #DCS_STOPPED        ' motor is currently stopped
+	byte	$01, $72, $07, $f6
+'-' {
+'-' '}
+'-' 
+'-'                 rdlong  tmpX, ptra++                    ' get base pin
+	byte	$61, $ed, $06, $fb
+'-'                 or      all_pins, tmpX                  '  finish the all-pins variable
+	byte	$76, $8f, $42, $f5
+'-'                 add     drive_pins, tmpX                '  finish the drive-pins variable
+	byte	$76, $91, $02, $f1
+'-'                 add     adc_pins, tmpX                  '  finish the adc-pins variable
+	byte	$76, $93, $02, $f1
+'-' 
+'-'                 mov     tmpY, #0                        ' make the single-pin variables
+	byte	$00, $ee, $06, $f6
+'-' .pin            altd    tmpY, #pin_adc_u_i              ' only 14, dont use last 2
+	byte	$87, $ef, $8e, $f9
+'-'                 mov     0-0, tmpX
+	byte	$76, $01, $00, $f6
+'-'                 add     tmpX, #1
+	byte	$01, $ec, $06, $f1
+'-'                 incmod  tmpY, #13                   wc
+	byte	$0d, $ee, $16, $f7
+'-'     if_nc       jmp     #.pin
+	byte	$ec, $ff, $9f, $3d
+'-' 
+'-'                 rdlong  params_ptr_, ptra++             ' get parameters pointer
+	byte	$61, $3b, $07, $fb
+'-'                 add     ptra, #2*4                      '  point to return data, targetIncre is at long index [-1]
+	byte	$08, $f0, $07, $f1
+'-'                                                         '                        targetAngle is at long index [-2]
+'-' 
+'-'                 dirl    all_pins                        ' disable PWM and ADC pins for configuration
+	byte	$40, $8e, $62, $fd
+'-' 
+'-'                 wrpin   pwmn, pin_pwm_u_l               ' set up PWM pins, low side is inverted
+	byte	$8f, $97, $02, $fc
+'-'                 wrpin   pwmt, pin_pwm_u_h               ' high side is not inverted
+	byte	$90, $95, $02, $fc
+'-'                 wrpin   pwmn, pin_pwm_v_l
+	byte	$91, $97, $02, $fc
+'-'                 wrpin   pwmt, pin_pwm_v_h
+	byte	$92, $95, $02, $fc
+'-'                 wrpin   pwmn, pin_pwm_w_l
+	byte	$93, $97, $02, $fc
+'-'                 wrpin   pwmt, pin_pwm_w_h
+	byte	$94, $95, $02, $fc
+'-' 
+'-'                 wxpin   fram, drive_pins                '  and set PWM frame width, too, matches adc period
+	byte	$48, $9b, $12, $fc
+'-'                 wypin   #0, drive_pins                  ' make sure pwm is off
+	byte	$48, $01, $28, $fc
+'-' 
+'-'                 ' ADC setup - GIO level
+'-'                 wrpin   adc_modes+0, adc_pins           ' switch ADC to GIO calibration
+	byte	$49, $a7, $02, $fc
+'-'                 wxpin   adc_fram, adc_pins              ' set count period to match our PWM frame width
+	byte	$49, $99, $12, $fc
+'-'                 wypin   #0, adc_pins
+	byte	$49, $01, $28, $fc
+'-' 
+'-'                 dirh    adc_pins                        ' enable ADC pins to use adc
+	byte	$41, $92, $62, $fd
+'-' 
+'-'                 call    #.wait4adc                      ' allow ADC rest period (wait for sample ready)
+	byte	$6c, $04, $b0, $fd
+'-' 
+'-'                 rdpin   gio_levels+0, pin_adc_u_i       ' GIO samples done, read them
+	byte	$87, $2b, $8b, $fa
+'-'                 rdpin   gio_levels+1, pin_adc_v_i
+	byte	$88, $2d, $8b, $fa
+'-'                 rdpin   gio_levels+2, pin_adc_w_i
+	byte	$89, $2f, $8b, $fa
+'-'                 rdpin   gio_levels+3, pin_adc_cur_i
+	byte	$8b, $31, $8b, $fa
+'-' 
+'-'                 ' ADC setup - VIO level
+'-'                 dirl    adc_pins                        ' disable ADC pins for configuration
+	byte	$40, $92, $62, $fd
+'-'                 wrpin   adc_modes+1, adc_pins           ' switch ADC to VIO calibration
+	byte	$49, $a9, $02, $fc
+'-'                 dirh    adc_pins                        ' enable ADC to use adc
+	byte	$41, $92, $62, $fd
+'-' 
+'-'                 call    #.wait4adc                      ' allow ADC rest period (wait for sample ready)
+	byte	$4c, $04, $b0, $fd
+'-' 
+'-'                 rdpin   vio_levels+0, pin_adc_u_i       ' VIO samples done, read them
+	byte	$87, $33, $8b, $fa
+'-'                 rdpin   vio_levels+1, pin_adc_v_i
+	byte	$88, $35, $8b, $fa
+'-'                 rdpin   vio_levels+2, pin_adc_w_i
+	byte	$89, $37, $8b, $fa
+'-'                 rdpin   vio_levels+3, pin_adc_cur_i
+	byte	$8b, $39, $8b, $fa
+'-' 
+'-'                 sub     vio_levels+0, gio_levels+0      ' sub gio from vio to get range
+	byte	$95, $33, $83, $f1
+'-'                 sub     vio_levels+1, gio_levels+1      ' sub gio from vio to get range
+	byte	$96, $35, $83, $f1
+'-'                 sub     vio_levels+2, gio_levels+2      ' sub gio from vio to get range
+	byte	$97, $37, $83, $f1
+'-'                 sub     vio_levels+3, gio_levels+3      ' sub gio from vio to get range
+	byte	$98, $39, $83, $f1
+'-' 
+'-'                 qdiv    numerator, vio_levels+0         ' calculate our values from readings
+	byte	$99, $a1, $12, $fd
+'-'                 qdiv    numerator, vio_levels+1
+	byte	$9a, $a1, $12, $fd
+'-'                 qdiv    numerator, vio_levels+2
+	byte	$9b, $a1, $12, $fd
+'-'                 qdiv    numerator, vio_levels+3
+	byte	$9c, $a1, $12, $fd
+'-' 
+'-'                 getqx   scl_levels+0                    ' getqx waits for the results, but need to get result before next is written
+	byte	$18, $32, $63, $fd
+'-'                 getqx   scl_levels+1
+	byte	$18, $34, $63, $fd
+'-'                 getqx   scl_levels+2
+	byte	$18, $36, $63, $fd
+'-'                 getqx   scl_levels+3
+	byte	$18, $38, $63, $fd
+'-' 
+'-' 
+'-'                 ' finally, configure the current sense pins for main loop
+'-'                 dirl    adc_pins                        ' disable ADC pins for configuration
+	byte	$40, $92, $62, $fd
+'-' 
+'-'                  ' ADC setup for actual values
+'-'                wrpin   adc_modes+2, adc_pins            ' switch ADC to pin sampling
+	byte	$49, $ab, $02, $fc
+'-' 
+'-'                 testb   sync_required, #0           wc  ' do we need to wait for attention?
+	byte	$00, $a4, $16, $f4
+'-'     if_c        waitatn                                 ' Y: wait to be atn by caller
+	byte	$24, $3c, $60, $cd
+'-' 
+'-'                 call    #.driveinit                     ' enable ADC and PWM pins simultaneously for phase-locked operation
+	byte	$bc, $03, $b0, $fd
+'-'                                                         ' from now on, the adc and pwm run continously
+'-' 
+'-'                 mov     pos_, #0                        ' reset pos
+	byte	$00, $68, $07, $f6
+'-'                 mov     loop_dtcks_, #0                 ' just in case
+	byte	$00, $6e, $07, $f6
+'-'                 mov     loop_ctcks_, #0                 ' just in case
+	byte	$00, $70, $07, $f6
+'-'                 mov     drv_incr, #0                    ' reset incr to stopped
+	byte	$00, $fc, $06, $f6
+'-'                 mov     prior_incr, #0                  ' just in case
+	byte	$00, $f8, $06, $f6
+'-'                 mov     tgt_incr, #0                    ' just in case
+	byte	$00, $f6, $06, $f6
+'-'                 mov     sv_tgt_incr, #0                 ' just in case
+	byte	$00, $fa, $06, $f6
+'-'                 mov     fwdrev, #0                      ' just in case
+	byte	$00, $08, $07, $f6
+'-'                 mov     angle_, #0                      ' just in case
+	byte	$00, $04, $07, $f6
+'-' 
+'-'                 ' do initial read of parms so control loop can use them
+'-'                 setq    #DRVR_PARAMS_LONGS_COUNT-1      ' load fresh parameter table (13 DRVR_PARAMS_LONGS_COUNT longs)
+	byte	$28, $1a, $64, $fd
+'-'                 rdlong  params_ptr_+1, params_ptr_
+	byte	$9d, $3d, $03, $fb
+'-' 
+'-'                 mov     ramp_curr, ramp_min_            ' set initial inc ramp
+	byte	$aa, $03, $03, $f6
+'-'                 mov     duty_, duty_min_                ' reset duty
+	byte	$a0, $6b, $03, $f6
+'-'                 mov     curr_stop, stop_mode_           ' save current stop mode
+	byte	$a7, $0d, $03, $f6
+'-'                 call    #.checkstop                     ' set drive on or off according to stop mode
+	byte	$a0, $03, $b0, $fd
+'-' 
+'-'     ' =========================================================================
+'-'     '  MOTOR DRIVE LOOP - runs at 2.0 kHz (500.0 uSec period)
+'-'     '       time to adjust angle...
+'-'     ' -------------------------------------------------------------------------
+'-' .drvMotor
+'-'                 getct   ctrlSrtTix                      ' remember when we started this loop
+	byte	$1a, $f2, $62, $fd
+'-' {
+'-' '}
+'-' '
+'-' ' with emergency stop we quickly stop and then ignore everything else until eStop request is removed!
+'-' '
+'-'                 or      e_stop_, e_stop_            wz  ' Q: Emergency Stop Requested? (T/F - where T means stop!)
+	byte	$a8, $51, $4b, $f5
+'-'     if_z        jmp     #.noEStop                       ' No: continue on..
+	byte	$14, $00, $90, $ad
+'-' .eStop
+'-'                 cmp     drv_state_, #DCS_ESTOP      wz  ' Q: Are we already Emergency Stopped?
+	byte	$07, $72, $0f, $f2
+'-'     if_z        jmp     #.endRqst                       ' YES, motor is at ESTOP, just exit (w/o increment)
+	byte	$ac, $01, $90, $ad
+'-'                 call    #.driveoff                      ' set drive pwm off, regardless of stop mode
+	byte	$7c, $03, $b0, $fd
+'-'                 mov     drv_state_, #DCS_ESTOP          ' mark that we are stopped
+	byte	$07, $72, $07, $f6
+'-'                 jmp     #.endRqst                       ' motor now at ESTOP, just exit (w/o increment)
+	byte	$a0, $01, $90, $fd
+'-' .noEStop
+'-'                 cmp     drv_state_, #DCS_ESTOP      wz  ' Q: were we emergency stopped?
+	byte	$07, $72, $0f, $f2
+'-'     if_z        mov     drv_state_, #DCS_STOPPED        ' YES, reset to simply stopped so we start out pins correctly
+	byte	$01, $72, $07, $a6
+'-'                 mov     sv_tgt_incr, tgt_incr
+	byte	$7b, $fb, $02, $f6
+'-' 
+'-'                 call    #.gettgtincr                    ' get rate of increment ( +/- drive power, or 0 stop)
+	byte	$34, $03, $b0, $fd
+'-'                 or      tgt_incr, tgt_incr          wz  ' Q: being asked to stop?
+	byte	$7b, $f7, $4a, $f5
+'-'     if_nz       jmp     #.notRqStop                     ' NO, not exception, check next
+	byte	$18, $00, $90, $5d
+'-'                 ' this is a stop request
+'-'                 cmp     drv_state_, #DCS_STOPPED    wz  ' Q: are we already stopped?
+	byte	$01, $72, $0f, $f2
+'-'     if_nz       jmp     #.newRqst                       ' NO, not stopped, go do stop!
+	byte	$2c, $00, $90, $5d
+'-'                 cmp     curr_stop, stop_mode_       wz  ' stopped, see if stop mode has changed and update drive_pin state
+	byte	$a7, $0d, $0b, $f2
+'-'     if_nz       mov     curr_stop, stop_mode_           ' update curr stop mode
+	byte	$a7, $0d, $03, $56
+'-'     if_nz       call    #.checkstop                     ' set drive on or off according to stop mode
+	byte	$54, $03, $b0, $5d
+'-'                 jmp     #.endRqst                       ' YES, motor at STOP, just exit (w/o increment)
+	byte	$70, $01, $90, $fd
+'-' .notRqStop
+'-'                 cmp     sv_tgt_incr, tgt_incr       wz  ' Q: do we have a new request?
+	byte	$7b, $fb, $0a, $f2
+'-'     if_z        jmp     #.currRqst                      ' NO, same as last, just continue what we are doing
+	byte	$98, $00, $90, $ad
+'-'                 ' Accept a new drive command only when NOT in middle of change
+'-'                 cmp     drv_state_, #DCS_STOPPED    wz  ' Q: STOPPED not doing anything?
+	byte	$01, $72, $0f, $f2
+'-'     if_nz       cmp     drv_state_, #DCS_AT_SPEED   wz  ' Q: AT_SPEED not doing anything?
+	byte	$03, $72, $0f, $52
+'-'     if_nz       cmp     drv_state_, #DCS_FAULTED    wz  ' Q: FAULTED not doing anything?
+	byte	$06, $72, $0f, $52
+'-'     if_nz       mov     tgt_incr, sv_tgt_incr           ' BUSY, throw away this request this request
+	byte	$7d, $f7, $02, $56
+'-'     if_nz       jmp     #.currRqst                      ' BUSY, ignore command, continue same command
+	byte	$84, $00, $90, $5d
+'-'                 ' NOT BUSY, fall through to process new request...
+'-' .newCmd
+'-' {
+'-' '}
+'-' ' =========================================================================
+'-' .newRqst    ' have new request
+'-'             ' determine what we need to do
+'-'             ' let's see if user wants to change speed
+'-'     ' -------------------------------------------------------------------------
+'-'                 mov     prior_incr, sv_tgt_incr         ' have new request - save the prior!
+	byte	$7d, $f9, $02, $f6
+'-'                 ' first, if faulted, clear fault
+'-'                 cmp     drv_state_, #DCS_FAULTED    wz  ' Q: is MOTOR faulted?
+	byte	$06, $72, $0f, $f2
+'-'     if_nz       jmp     #.chkStopCmd                    ' NO, go to next check
+	byte	$20, $00, $90, $5d
+'-'             ' MOTOR faulted, clear fault so we can run again
+'-' .resetFault
+'-'                 mov     drv_incr, #0                    ' reset incr to stopped
+	byte	$00, $fc, $06, $f6
+'-'                 mov     prior_incr, #0                  ' reset prior
+	byte	$00, $f8, $06, $f6
+'-'                 mov     fwdrev, #0                      ' just in case
+	byte	$00, $08, $07, $f6
+'-'                 mov     angle_, #0                      ' just in case
+	byte	$00, $04, $07, $f6
+'-'                 mov     drv_state_, #DCS_STOPPED        ' reset fault -> to stopped
+	byte	$01, $72, $07, $f6
+'-'                                                         ' drive_pins were floated when detect fault
+'-'                 call    #.checkstop                     ' set drive pwm according to stop mode
+	byte	$10, $03, $b0, $fd
+'-'                 ' if we were faulted, we are already stopped so just do nothing if new stop request
+'-'                 or      tgt_incr, tgt_incr          wz  ' Q: is stop request?
+	byte	$7b, $f7, $4a, $f5
+'-'     if_z        jmp     #.endRqst                       ' YES, is stop and motor STOPPED, just exit (w/o increment)
+	byte	$28, $01, $90, $ad
+'-' .chkStopCmd
+'-'                 ' if NEW request is stop
+'-'                 ' NOTE: (earlier code ensures we are NOT stopped or FAULTed when we get here)
+'-'                 or      tgt_incr, tgt_incr          wz  ' Q: is stop request?
+	byte	$7b, $f7, $4a, $f5
+'-'     if_z        mov     drv_state_, #DCS_SPIN_DN        ' YES, mark spin-down
+	byte	$04, $72, $07, $a6
+'-'     if_z        jmp     #.rampDn                        ' YES, go do it!
+	byte	$bc, $00, $90, $ad
+'-' .chkStopped
+'-'                 ' not stop, have start or speed adjustment?
+'-'                 cmp     drv_state_, #DCS_STOPPED    wz  ' Q: are we stopped?
+	byte	$01, $72, $0f, $f2
+'-'     if_nz       jmp     #.doSpdChange                   ' NO, so not start, go do speed adjustment
+	byte	$08, $00, $90, $5d
+'-'                                                         ' have start
+'-' .dospinup
+'-'                 mov     drv_state_, #DCS_SPIN_UP        ' We are going to ramp up
+	byte	$02, $72, $07, $f6
+'-'                 jmp     #.rampUp                        ' now go ramp up!
+	byte	$4c, $00, $90, $fd
+'-' 
+'-' .doSpdChange
+'-'     ' ------------------------------------
+'-'                ' NO, We have a speed adjustment (determine how to do...)
+'-'                 '  NOTEs: [ + >> +, + >> -, - >> -, - >> +]
+'-'                 '    + to - -> make direction change (slow down, ramp up in other direction)
+'-'                 '    - to + -> make direction change (slow down, ramp up  in other direction)
+'-'                 '    + to larger + -> ramp up to new
+'-'                 '    + to smaller + -> ramp down to new
+'-'                 '    - to larger - -> ramp up to new
+'-'                 '    - to smaller - -> ramp down to new
+'-' 
+'-'                 ' yes we were stopping and haven't yet stopped, so just do speed change
+'-'                 ' (we are currently at drv_incr but need to head for tgt_incr instead)
+'-' .notInStop
+'-'                 ' first do we have same sign?
+'-'                 testb   drv_incr, #31               wc   ' find dual '-' signs (CY=both nega)
+	byte	$1f, $fc, $16, $f4
+'-'                 testb   tgt_incr, #31               andc ' (bCY=REV)
+	byte	$1f, $f6, $56, $f4
+'-'     if_c        jmp     #.haveSame
+	byte	$0c, $00, $90, $cd
+'-'                 testbn  drv_incr, #31               wc   ' find dual '+' signs (CY=both posi)
+	byte	$1f, $fc, $36, $f4
+'-'                 testbn  tgt_incr, #31               andc ' (bnCY=FWD)
+	byte	$1f, $f6, $76, $f4
+'-'     if_nc       jmp     #.notSame
+	byte	$1c, $00, $90, $3d
+'-' .haveSame       ' we have prior and new with same sign, so should we slow down or speed up?
+'-'                 testb   tgt_incr, #31               wz  ' (bZ=REV)
+	byte	$1f, $f6, $0e, $f4
+'-'                 cmps    drv_incr, tgt_incr          wc  ' Q: Should we slow dn or speed up? (CY=speed up)
+	byte	$7b, $fd, $52, $f2
+'-'     if_nz       modc    _nc                         wc  ' invert C (nCY=slow down), if tgt_incr=FWD
+	byte	$6f, $60, $74, $5d
+'-'     if_nc       mov     drv_state_, #DCS_SPIN_UP        ' CY=0: speed up
+	byte	$02, $72, $07, $36
+'-'     if_nc       jmp     #.rampUp
+	byte	$20, $00, $90, $3d
+'-'     if_c        mov     drv_state_, #DCS_SPIN_DN        ' CY=1: slow down
+	byte	$04, $72, $07, $c6
+'-'     if_c        jmp     #.rampDn
+	byte	$78, $00, $90, $cd
+'-'     ' ------------------------------------
+'-' .notSame    ' we have prior and new but NOT the same sign, let's slowdown then change direction
+'-'                 ' let's change direction
+'-'                 mov     drv_state_, #DCS_SLOW_TO_CHG
+	byte	$05, $72, $07, $f6
+'-'                 jmp     #.slow2Chg
+	byte	$b8, $00, $90, $fd
+'-' 
+'-'     ' ====================================
+'-' .currRqst   ' No new request, continue with
+'-'             '  current request
+'-'     ' -------------------------------------------------------------------------
+'-' .chkStop        cmp     drv_state_, #DCS_STOPPED    wz  ' Q: Stopped?
+	byte	$01, $72, $0f, $f2
+'-'     if_z        jmp     #.endRqst                       ' YES, motor STOPPED, just exit (w/o increment)
+	byte	$c8, $00, $90, $ad
+'-'                 ' motor is running, if ramp do ramp, else increment
+'-'     ' -------------------------------------------------------------------------
+'-' .chkUp          cmp     drv_state_, #DCS_SPIN_UP    wz  ' Q: Spinning Up?
+	byte	$02, $72, $0f, $f2
+'-'     if_nz       jmp     #.chkDn                         ' NO, check next
+	byte	$58, $00, $90, $5d
+'-'     ' ------------------------------------
+'-' .rampUp
+'-'                 ' if we don't have it, preset our starting angle (assume motor moved during float!)
+'-' 
+'-'                 or      drv_incr, drv_incr          wz  ' -and- are we stopped, just about to spin up?
+	byte	$7e, $fd, $4a, $f5
+'-'     if_z        mov     ramp_curr, ramp_min_            ' set initial ramp if starting from 0
+	byte	$aa, $03, $03, $a6
+'-'     if_z        call    #.checkstopfloaton              ' make sure drive is on according to stop mode
+	byte	$8c, $02, $b0, $ad
+'-'                 ' if we are at target, stop the ramp effort
+'-'                 cmps    drv_incr, tgt_incr          wz  ' Q: Did we match target?
+	byte	$7b, $fd, $4a, $f2
+'-'     if_z        jmp     #.endRUpAtSpeed                 ' YES, (Matched) go mark done
+	byte	$3c, $00, $90, $ad
+'-'                 ' do next UP adjustment or set at-speed
+'-'                 mov     curr_ramp, ramp_curr            ' current ramp
+	byte	$81, $ff, $02, $f6
+'-'                 add     ramp_curr, ramp_inc_            ' increase ramp for next time
+	byte	$ab, $03, $03, $f1
+'-'                 cmps    ramp_curr, ramp_max_        wc  ' too high?
+	byte	$a9, $03, $53, $f2
+'-'     if_nc       mov     ramp_curr, ramp_max_            ' Y set to ramp_max
+	byte	$a9, $03, $03, $36
+'-'                 ' calculate how far we are from desired
+'-'                 mov     final_ramp, tgt_incr            ' compute our delta from curr to target
+	byte	$7b, $01, $03, $f6
+'-'                 subs    final_ramp, drv_incr
+	byte	$7e, $01, $c3, $f1
+'-'                 ' now are we moving FWD or REV?
+'-'                 testb   tgt_incr, #31               wc  ' Q: moving FWD or REV? (bCY=REV)
+	byte	$1f, $f6, $16, $f4
+'-' .havefast1
+'-'                 modz    _c                          wz  ' move C to Z
+	byte	$6f, $18, $6c, $fd
+'-'                 abs     final_ramp                      ' make sure final is +ve
+	byte	$80, $01, $43, $f6
+'-'                 cmps    final_ramp, curr_ramp       wc  ' Q: is delta larger than ramp
+	byte	$7f, $01, $53, $f2
+'-'     if_nc_and_nz adds   drv_incr, curr_ramp             ' YES, just add ramp value
+	byte	$7f, $fd, $42, $11
+'-'     if_c_and_nz adds    drv_incr, final_ramp            ' NO, add remaining final delta
+	byte	$80, $fd, $42, $41
+'-'     if_nc_and_z subs    drv_incr, curr_ramp             ' YES, just add ramp value
+	byte	$7f, $fd, $c2, $21
+'-'     if_c_and_z  subs    drv_incr, final_ramp            ' NO, add remaining final delta
+	byte	$80, $fd, $c2, $81
+'-'                 jmp     #.justIncr                      ' increment motor angle, then exit
+	byte	$6c, $00, $90, $fd
+'-' .endRUpAtSpeed
+'-'                 mov     drv_state_, #DCS_AT_SPEED       ' YES, show we got to desired speed!
+	byte	$03, $72, $07, $f6
+'-'                 jmp     #.endRqst                       ' motor AT_SPEED, just exit (w/o increment)
+	byte	$68, $00, $90, $fd
+'-' 
+'-'     ' -------------------------------------------------------------------------
+'-' .chkDn          cmp     drv_state_, #DCS_SPIN_DN    wz  ' Q: Spinning Down?
+	byte	$04, $72, $0f, $f2
+'-'     if_nz       jmp     #.chkSlow2Chg                   ' NO, check next
+	byte	$40, $00, $90, $5d
+'-'     ' ------------------------------------
+'-' .rampDn
+'-'                 ' do next DOWN adjustment ends with AT_SPEED or STOPPED
+'-'                 ' NOTE!!! if tgt_incr is ZERO then we don't test its sign bit here
+'-'                 '  instead we test the sign bit of the current driver target as we are spinning down
+'-'                 '  from the current driver target to ZERO!
+'-'                 cmps    drv_incr, tgt_incr          wz  ' Q: Did we match target?
+	byte	$7b, $fd, $4a, $f2
+'-'     if_z        jmp     #.endRDnAtTgt                   ' YES, (Matched) go mark done
+	byte	$1c, $00, $90, $ad
+'-'                 ' calculate how far we are from desired
+'-'                 mov     final_ramp, tgt_incr            ' compute our delta from curr to target
+	byte	$7b, $01, $03, $f6
+'-'                 subs    final_ramp, drv_incr
+	byte	$7e, $01, $c3, $f1
+'-'                 ' now are we moving FWD or REV?
+'-'                 or      tgt_incr, tgt_incr          wz  ' Q: are we stopping? (if stopping don't use sign of tgt_incr)
+	byte	$7b, $f7, $4a, $f5
+'-'     if_z        testbn  drv_incr, #31               wc  ' YES, moving FWD or REV? (bCY=FWD)
+	byte	$1f, $fc, $36, $a4
+'-'     if_nz       testbn  tgt_incr, #31               wc  ' NO, moving FWD or REV? (bCY=FWD)
+	byte	$1f, $f6, $36, $54
+'-' .havefast
+'-' 
+'-'                 mov     curr_ramp, ramp_down_           ' we want to ramp down
+	byte	$a5, $ff, $02, $f6
+'-'                 jmp     #.havefast1                     ' jmp to previous ramping code
+	byte	$ac, $ff, $9f, $fd
+'-' .endRDnAtTgt
+'-'                 ' AT TARGET now adjust state
+'-'                 or      tgt_incr, tgt_incr          wz  ' Q: was our target ZERO? (are we stopping?)
+	byte	$7b, $f7, $4a, $f5
+'-'                 ' at target but it's not zero so we are AT_SPEED!
+'-'     if_nz       mov     drv_state_, #DCS_AT_SPEED       ' YES, show we got here!
+	byte	$03, $72, $07, $56
+'-'     if_nz       jmp     #.endRqst                       ' motor AT_SPEED, just exit (w/o increment)
+	byte	$30, $00, $90, $5d
+'-' .endAtZero
+'-'                 ' at target but it is zero so we are STOPPED!
+'-'                 mov     drv_state_, #DCS_STOPPED        ' report that we are stopped
+	byte	$01, $72, $07, $f6
+'-'                 mov     duty_, duty_min_                ' reset duty
+	byte	$a0, $6b, $03, $f6
+'-'                 ' if we are to freewheel the motor let's float all drive pins
+'-' 
+'-'                 call    #.checkstopfloatoff             ' set drive off according to stop mode
+	byte	$00, $02, $b0, $fd
+'-'                 jmp     #.endRqst                       ' motor STOPPED, just exit (w/o increment)
+	byte	$20, $00, $90, $fd
+'-' 
+'-'     ' -------------------------------------------------------------------------
+'-' .chkSlow2Chg    cmp     drv_state_, #DCS_SLOW_TO_CHG wz ' Q: Are we slowing down to change direction?
+	byte	$05, $72, $0f, $f2
+'-'     if_nz       jmp     #.justIncr                      ' NO, check next
+	byte	$14, $00, $90, $5d
+'-'      ' ------------------------------------
+'-' .slow2Chg
+'-'                 ' do next DOWN adjustment, if stopped do spinup
+'-'                 '  (increment > 0, we are not stopped)
+'-'                 ' NOTE!!! tgt_incr is where we are going after we spin down so we don't test its sign bit here
+'-'                 '  instead we test the sign bit of the current driver target as we are spinning down
+'-'                 '  from the current driver target to ZERO!
+'-' .moreSlow
+'-'                 or      drv_incr, drv_incr          wz  ' Q: stopped?
+	byte	$7e, $fd, $4a, $f5
+'-'     if_z        jmp     #.dospinup                      ' yes, go start rampUp
+	byte	$fc, $fe, $9f, $ad
+'-'                                                         ' calculate how far we are from desired
+'-'                 mov     final_ramp, drv_incr            ' compute our delta from curr to 0
+	byte	$7e, $01, $03, $f6
+'-'                                                         ' now are we moving FWD or REV?
+'-'                 testbn  drv_incr, #31               wc  ' YES, moving FWD or REV? (bCY=FWD)
+	byte	$1f, $fc, $36, $f4
+'-'                 jmp     #.havefast                      ' jmp to previous ramp code
+	byte	$c0, $ff, $9f, $fd
+'-' 
+'-'     ' -------------------------------------------------------------------------
+'-' .justIncr   ' just do our increment of angle and we're done!
+'-'                 add     angle_, drv_incr
+	byte	$7e, $05, $03, $f1
+'-' '                debug("DRV: ", uhex_(drive_pins), " A:(", sdec_(angle_), ") += DI:(", sdec_(drv_incr), ")")
+'-' 
+'-' .endRqst
+'-'                 getct   loop_ctcks_                     ' how long was this pass? send to host
+	byte	$1a, $70, $63, $fd
+'-'                 sub     loop_ctcks_, ctrlSrtTix
+	byte	$79, $71, $83, $f1
+'-'                 ' reset timer (schedule next control loop run)
+'-'                 mov     ctrlEndTix, ctrlSrtTix
+	byte	$79, $f5, $02, $f6
+'-'                 addct1  ctrlEndTix, cfg_ctcks_
+	byte	$a6, $f5, $62, $fa
+'-' {
+'-' '}
+'-' 
+'-'     ' =========================================================================
+'-'     ' this or
+'-'     ' =========================================================================
+'-' {
+'-' '}
+'-' .ctlMotor
+'-' 
+'-'     ' =========================================================================
+'-'     '  MOTOR Speed Maintenance Loop - runs at 43.9 kHz (22.8 uSec period)
+'-'     '       keep our error rate low...
+'-'     ' -------------------------------------------------------------------------
+'-'                 getct   drvrSrtTix                      ' remember when we started this loop
+	byte	$1a, $f0, $62, $fd
+'-' 
+'-'                 call    #.wait4adc                      ' allow ADC rest period (wait for sample ready), also wait for start of ctl loop
+	byte	$e4, $01, $b0, $fd
+'-'                 rdpin   sense_u_, pin_adc_u_i           ' pin samples done, read them
+	byte	$87, $5f, $8b, $fa
+'-'                 rdpin   sense_v_, pin_adc_v_i
+	byte	$88, $61, $8b, $fa
+'-'                 rdpin   sense_w_, pin_adc_w_i
+	byte	$89, $63, $8b, $fa
+'-'                 rdpin   sense_i_, pin_adc_cur_i
+	byte	$8b, $65, $8b, $fa
+'-' 
+'-'                 sub     sense_u_, gio_levels+0          ' compute (numerator * (pin_level - gio_level))
+	byte	$95, $5f, $83, $f1
+'-'                 muls    sense_u_, scl_levels+0
+	byte	$99, $5f, $13, $fa
+'-' 
+'-'                 sub     sense_v_, gio_levels+1
+	byte	$96, $61, $83, $f1
+'-'                 muls    sense_v_, scl_levels+1
+	byte	$9a, $61, $13, $fa
+'-' 
+'-'                 sub     sense_w_, gio_levels+2
+	byte	$97, $63, $83, $f1
+'-'                 muls    sense_w_, scl_levels+2
+	byte	$9b, $63, $13, $fa
+'-' 
+'-'                 sub     sense_i_, gio_levels+3
+	byte	$98, $65, $83, $f1
+'-'                 muls    sense_i_, scl_levels+3
+	byte	$9c, $65, $13, $fa
+'-' 
+'-'                 mov     tmpY, duty_                     ' feed three CORDIC operations to get phase drive levels
+	byte	$b5, $ef, $02, $f6
+'-'                 shr     tmpY, #4
+	byte	$04, $ee, $46, $f0
+'-'                 mov     tmpX, angle_                    ' requested angle
+	byte	$82, $ed, $02, $f6
+'-'                 qrotate tmpY, tmpX
+	byte	$76, $ef, $42, $fd
+'-'                 add     tmpX, third                     ' 120 degrees further
+	byte	$4f, $ed, $02, $f1
+'-'                 qrotate tmpY, tmpX
+	byte	$76, $ef, $42, $fd
+'-'                 add     tmpX, third                     ' 240 degress further
+	byte	$4f, $ed, $02, $f1
+'-'                 qrotate tmpY, tmpX
+	byte	$76, $ef, $42, $fd
+'-' 
+'-'                 getqy   drive_u_                        ' get three CORDIC results, duty/16*cos(angle_+N*120degree) (N->0,1,2)
+	byte	$19, $58, $63, $fd
+'-'                 getqy   drive_v_
+	byte	$19, $5a, $63, $fd
+'-'                 getqy   drive_w_
+	byte	$19, $5c, $63, $fd
+'-' ' used when tracking down PWM drive problem...
+'-' '                mov     driveUsav_, drive_u_           ' copy for later display
+'-' 
+'-'                 mov     tmpX, drive_u_                  ' get smallest drive level into tmpX
+	byte	$ac, $ed, $02, $f6
+'-'                 cmps    tmpX, drive_v_              wc
+	byte	$ad, $ed, $52, $f2
+'-'     if_nc       mov     tmpX, drive_v_
+	byte	$ad, $ed, $02, $36
+'-'                 cmps    tmpX, drive_w_              wc
+	byte	$ae, $ed, $52, $f2
+'-'     if_nc       mov     tmpX, drive_w_
+	byte	$ae, $ed, $02, $36
+'-' 
+'-'                 mov     tmpY, drive_u_                  ' get largest drive level into tmpY
+	byte	$ac, $ef, $02, $f6
+'-'                 cmps    tmpY, drive_v_              wc
+	byte	$ad, $ef, $52, $f2
+'-'     if_c        mov     tmpY, drive_v_
+	byte	$ad, $ef, $02, $c6
+'-'                 cmps    tmpY, drive_w_              wc
+	byte	$ae, $ef, $52, $f2
+'-'     if_c        mov     tmpY, drive_w_
+	byte	$ae, $ef, $02, $c6
+'-' 
+'-'                 add     tmpX, tmpY                      ' sum smallest and largest, then divide by 2
+	byte	$77, $ed, $02, $f1
+'-'                 sar     tmpX, #1
+	byte	$01, $ec, $c6, $f0
+'-' 
+'-'                 sub     drive_u_, tmpX                  ' subtract difference from drive levels
+	byte	$76, $59, $83, $f1
+'-'                 sub     drive_v_, tmpX                  ' offset round the average drive pwm
+	byte	$76, $5b, $83, $f1
+'-'                 sub     drive_w_, tmpX
+	byte	$76, $5d, $83, $f1
+'-' 
+'-'                 add     drive_u_, bias                  ' add center-bias and dead-time offsets to update PWMs
+	byte	$4e, $59, $03, $f1
+'-'                 add     drive_v_, bias                  ' center around the triangle counter
+	byte	$4e, $5b, $03, $f1
+'-'                 add     drive_w_, bias                  ' counter counts down to 0 and then up during fram period
+	byte	$4e, $5d, $03, $f1
+'-'                                                         ' when counting down and counter == y value, out turns on and off when counting up and counter == value
+'-'                                                         ' pwm config of output inverted or not-inverted. low side is inverted, high side is not
+'-'                                                         ' if drive_pins are floating then pwm isn't output
+'-' 
+'-'                 testb   driveoff, #0                wc  ' if driveoff is 0 then drive is enabled, else drive should be disabled
+	byte	$00, $0a, $17, $f4
+'-'     if_c        wypin   #0, drive_pins                  ' make sure pwm is off and all drive pins low
+	byte	$48, $01, $28, $cc
+'-'                 add     drive_u_, dead_gap_             ' make sure low side turns off (inverted) earlier than high side turns on (non-inverted)
+	byte	$a4, $59, $03, $f1
+'-'     if_nc       wypin   drive_u_, pin_pwm_u_l           ' safety on driver board make sure high side off if both low and high side are high, in case of an error
+	byte	$8f, $59, $23, $3c
+'-'                 sub     drive_u_, dead_gap_             ' shouldn't happen with dead-gap
+	byte	$a4, $59, $83, $f1
+'-'     if_nc       wypin   drive_u_, pin_pwm_u_h
+	byte	$90, $59, $23, $3c
+'-' 
+'-'                 add     drive_v_, dead_gap_             ' dead-gap was OFFSET
+	byte	$a4, $5b, $03, $f1
+'-'     if_nc       wypin   drive_v_, pin_pwm_v_l
+	byte	$91, $5b, $23, $3c
+'-'                 sub     drive_v_, dead_gap_             ' dead-gap was OFFSET
+	byte	$a4, $5b, $83, $f1
+'-'     if_nc       wypin   drive_v_, pin_pwm_v_h
+	byte	$92, $5b, $23, $3c
+'-' 
+'-'                 add     drive_w_, dead_gap_             ' dead-gap was OFFSET
+	byte	$a4, $5d, $03, $f1
+'-'     if_nc       wypin   drive_w_, pin_pwm_w_l
+	byte	$93, $5d, $23, $3c
+'-'                 sub     drive_w_, dead_gap_             ' dead-gap was OFFSET
+	byte	$a4, $5d, $83, $f1
+'-'     if_nc       wypin   drive_w_, pin_pwm_w_h
+	byte	$94, $5d, $23, $3c
+'-' 
+'-'                 testp   pin_hall_w                  wc  ' read hall effect sensor
+	byte	$40, $1c, $73, $fd
+'-'                 rcl     hall_, #1
+	byte	$01, $66, $a7, $f0
+'-'                 testp   pin_hall_v                  wc
+	byte	$40, $1a, $73, $fd
+'-'                 rcl     hall_, #1
+	byte	$01, $66, $a7, $f0
+'-'                 testp   pin_hall_u                  wc
+	byte	$40, $18, $73, $fd
+'-'                 rcl     hall_, #1
+	byte	$01, $66, $a7, $f0
+'-'                 and     hall_, #%111_111                ' (old << 3 | new) [_x_:ooo:nnn]
+	byte	$3f, $66, $07, $f5
+'-'                 altgb   hall_, #deltas                  ' load byte deltas[hall_] -> [-1, 0, 1]
+	byte	$56, $67, $6f, $f9
+'-'                 getbyte tmpY
+	byte	$00, $ee, $e2, $f8
+'-'                 signx   tmpY, #7                        ' sign-extend bit7
+	byte	$07, $ee, $66, $f7
+'-'                 add     pos_, tmpY                      ' add to current pos_
+	byte	$77, $69, $03, $f1
+'-' 
+'-'                 setq    #DRVR_PARAMS_LONGS_COUNT-1      ' load fresh parameter table (13 DRVR_PARAMS_LONGS_COUNT longs)
+	byte	$28, $1a, $64, $fd
+'-'                 rdlong  params_ptr_+1, params_ptr_
+	byte	$9d, $3d, $03, $fb
+'-' 
+'-'                 cmpm    angle_, prior_angle         wcz ' if angle has changed, forward or reverse?
+	byte	$83, $05, $bb, $f2
+'-'     if_nz       wrc     fwdrev                          ' if angle hasn't changed then use last forward/reverse
+	byte	$6c, $08, $63, $5d
+'-'                 mov     prior_angle, angle_
+	byte	$82, $07, $03, $f6
+'-' 
+'-'                 testb   fwdrev, #0                  wc  ' determine error
+	byte	$00, $08, $17, $f4
+'-'                 bitc    hall_, #3                       ' forward or reverse half of the hall_angles table
+	byte	$03, $66, $47, $f4
+'-'                 and     hall_, #%1111                   ' remove hall input from last time to stay in bounds
+	byte	$0f, $66, $07, $f5
+'-'                 alts    hall_, #hall_angles
+	byte	$66, $67, $97, $f9
+'-'                 mov     err_, 0-0
+	byte	$00, $6c, $03, $f6
+'-'     if_c        add     err_, offset_fwd_               ' hall sensor offsets
+	byte	$9e, $6d, $03, $c1
+'-'     if_nc       add     err_, offset_rev_
+	byte	$9f, $6d, $03, $31
+'-'                 subr    err_, angle_                    ' difference from requested angle
+	byte	$82, $6d, $c3, $f2
+'-'                 sar     err_, #24
+	byte	$18, $6c, $c7, $f0
+'-' 
+'-'                 abs     tmpY, err_                      ' fault? tmpY is absolute difference from hall angle to requested angle
+	byte	$b6, $ef, $42, $f6
+'-'                 cmp     tmpY, #125                  wc  ' less than ~176deg differ from requested? is ok
+	byte	$7d, $ee, $16, $f2
+'-'                 testb   driveoff, #0                orc ' if driveoff is 1 then ignore fault, i.e., manually moving wheel
+	byte	$00, $0a, $97, $f4
+'-'     if_nc       call    #.driveoff                      ' at FAULT: disable pwm output
+	byte	$6c, $00, $b0, $3d
+'-'     if_nc       mov     drv_state_, #DCS_FAULTED        '  also on FAULT: mark our motor as FAULTED
+	byte	$06, $72, $07, $36
+'-'     if_nc       wrlong  maxNeg, ptra[DRVR_STATUS_LONGS_COUNT] '  also on FAULT: report fault
+	byte	$0e, $a3, $66, $3c
+'-' 
+'-' .noFault        sub     tmpY, #256/6                wc  ' modulate duty (256 frac 6 - where 6 is # of hall cycles)
+	byte	$2a, $ee, $96, $f1
+'-'     if_nc       muls    tmpY, duty_up_
+	byte	$a2, $ef, $12, $3a
+'-'     if_c        muls    tmpY, duty_dn_
+	byte	$a3, $ef, $12, $ca
+'-'                 sar     tmpY, #8                        ' 8-bits is multiplying agressiveness of correction
+	byte	$08, $ee, $c6, $f0
+'-'                 add     duty_, tmpY
+	byte	$77, $6b, $03, $f1
+'-'                 fles    duty_, duty_max_                ' keep duty within limits
+	byte	$a1, $6b, $63, $f3
+'-'                 fges    duty_, duty_min_
+	byte	$a0, $6b, $43, $f3
+'-' 
+'-'                 getct   loop_dtcks_                     ' how long was this iteration? send to host
+	byte	$1a, $6e, $63, $fd
+'-'                 sub     loop_dtcks_, drvrSrtTix
+	byte	$78, $6f, $83, $f1
+'-' 
+'-'                 setq    #DRVR_STATUS_LONGS_COUNT-1      ' write drive[3]/sense[4]/hall/pos/duty/err/ticks[2]/state to hub
+	byte	$28, $1a, $64, $fd
+'-'                 wrlong  drive_u_, ptra
+	byte	$00, $59, $67, $fc
+'-' .loop           jnct1   #.ctlMotor                      ' if not time for drv loop just go to ctl loop
+	byte	$9c, $23, $cc, $fb
+'-'                 jmp     #.drvMotor
+	byte	$9c, $fc, $9f, $fd
+'-' 
+'-'     ' =========================================================================
+'-'     '  PRIVATE (Utiility) Subroutines
+'-'     ' -------------------------------------------------------------------------
+'-' 
+'-' .gettgtincr
+'-'                 rdlong  tgt_incr, ptra[-1]              ' get rate of increment ( +/- drive power, or 0 stop)
+	byte	$3f, $f7, $06, $fb
+'-'                 testb   tgt_incr, #31               wc  ' bit 31 is used to carry sync info
+	byte	$1f, $f6, $16, $f4
+'-'     if_c        pollatn                             wz  ' need to sync, but dont want to wait so if atn not ready
+	byte	$24, $1c, $68, $cd
+'-'     if_c_and_nz mov     tgt_incr, sv_tgt_incr           ' reset tgt_incr, if wanting atn and not received it yet
+	byte	$7d, $f7, $02, $46
+'-'     if_c_and_z  bitl    tgt_incr, #31                   ' have the atn, so
+	byte	$1f, $f6, $06, $84
+'-'     if_c_and_z  wrlong  tgt_incr, ptra[-1]              ' let caller know we have taken it by clearing sync bit
+	byte	$3f, $f7, $66, $8c
+'-'     _ret_       signx   tgt_incr, #30                   ' sign extend back to normal tgt_incr
+	byte	$1e, $f6, $66, $07
+'-' 
+'-' .driveinit                                              ' init drive pwm
+'-'                 dirh    all_pins                        ' enable ADC and PWM pins simultaneously for phase-locked operation
+	byte	$41, $8e, $62, $fd
+'-'                                                         ' the ADC and PWM smart pins are never disabled after this.
+'-'                 dirl    pin_hall_u                      ' make sure HALL pins are inputs
+	byte	$40, $18, $63, $fd
+'-'                 dirl    pin_hall_v
+	byte	$40, $1a, $63, $fd
+'-'                 dirl    pin_hall_w
+	byte	$40, $1c, $63, $fd
+'-'     _ret_       mov     driveoff, #0                    ' drive pwm output enabled, though checkstop is called before ctlMotor loop and may change this
+	byte	$00, $0a, $07, $06
+'-' 
+'-' .driveoff                                               ' disable pwm always
+'-'     _ret_       mov     driveoff, #1                    ' drive pwm output disabled
+	byte	$01, $0a, $07, $06
+'-' 
+'-' .checkstopfloaton                                       ' set drive enabled according to stop mode
+'-'                 skip    #%1000101                       ' same as inverted floatoff without drive disable
+	byte	$31, $8a, $64, $fd
+'-' .checkstopfloatoff                                      ' set drive disabled according to stop mode
+'-'                 skip    #%001100                        ' same as checkstop without initAngleFmHall and duty reset
+	byte	$31, $18, $64, $fd
+'-' .checkstop                                              ' set drive disabled to correct state
+'-'                 cmp     stop_mode_, #SM_FLOAT       wz  ' Q: what is new stop mode, should motor be freewheeling?
+	byte	$01, $4e, $0f, $f2
+'-'                 modz    _nz                         wz  ' invert Z, allows skipping invert by floaton
+	byte	$6f, $0a, $6c, $fd
+'-'     if_z        call    #.initAngleFmHall               ' make sure angle set correctly, so motor doesn't jerk when enters ctlMotor
+	byte	$1c, $00, $b0, $ad
+'-'     if_z        mov     duty_, duty_min_                ' reset duty, reduces jerk if not fully aligned
+	byte	$a0, $6b, $03, $a6
+'-'     if_z        mov     driveoff, #0                    ' drive pwm output enabled
+	byte	$00, $0a, $07, $a6
+'-'     if_nz       mov     driveoff, #1                    ' drive pwm output disabled
+	byte	$01, $0a, $07, $56
+'-'                 ret
+	byte	$2d, $00, $64, $fd
+'-' 
+'-' .wait4adc
+'-' .wait4adcAgn    testp   pin_adc_cur_i               wc  ' wait for ADC sample to be avail. (wtg on 4th pin set up)
+	byte	$40, $16, $73, $fd
+'-'     if_nc       jmp     #.wait4adcAgn
+	byte	$f8, $ff, $9f, $3d
+'-' .noWait4adc     ret
+	byte	$2d, $00, $64, $fd
+'-' 
+'-' .initAngleFmHall
+'-'                 ' init angle & prior from current motor position
+'-'                 testp   pin_hall_w                  wc  ' read hall effect sensor
+	byte	$40, $1c, $73, $fd
+'-'                 rcl     hall_, #1
+	byte	$01, $66, $a7, $f0
+'-'                 testp   pin_hall_v                  wc
+	byte	$40, $1a, $73, $fd
+'-'                 rcl     hall_, #1
+	byte	$01, $66, $a7, $f0
+'-'                 testp   pin_hall_u                  wc
+	byte	$40, $18, $73, $fd
+'-'                 rcl     hall_, #1
+	byte	$01, $66, $a7, $f0
+'-'                 testb   tgt_incr, #31               wc  ' Q: moving FWD or REV? (bCY=REV)
+	byte	$1f, $f6, $16, $f4
+'-'                 bitc    hall_, #3                       ' point to correct FWD/REV half of table
+	byte	$03, $66, $47, $f4
+'-'                 and     hall_, #%1111                   ' make sure rest of hall_ is cleared
+	byte	$0f, $66, $07, $f5
+'-'                 alts    hall_, #hall_angles
+	byte	$66, $67, $97, $f9
+'-'                 mov     angle_, 0-0
+	byte	$00, $04, $03, $f6
+'-'     if_c        add     angle_, offset_fwd_             ' adjust phase offset for hall sensor
+	byte	$9e, $05, $03, $c1
+'-'     if_nc       add     angle_, offset_rev_             ' can spin up in either direction
+	byte	$9f, $05, $03, $31
+'-'     _ret_       mov     prior_angle, angle_             ' show we are already here
+	byte	$82, $07, $03, $06
+'-' '
+'-' ' =========================================================================
+'-' all_pins        LONG    (13 << 6) + 0           ' all-pins variable (0 addpins 13) needs ADD/OR of basepin, skip last 2 pwm pins, not used
+	byte	$40, $03, $00, $00
+'-' drive_pins      LONG    (5 << 6) + 8            ' drive-pins variable (+8 addpins 5) needs ADD of basepin, skip last 2 pwm pins, not used
+	byte	$48, $01, $00, $00
+'-' adc_pins        LONG    (4 << 6) + 0            ' drive-pins variable (+0 addpins 4) needs ADD/OR of basepin, note total of 5 pins, adc_x not used
+	byte	$00, $01, $00, $00
+'-' pwmt            LONG    %000_000000_01_01000_0  ' PWM true (P_BITDAC | P_PWM_TRIANGLE | P_OE)
+	byte	$50, $00, $00, $00
+'-' pwmn            LONG    %001_000000_01_01000_0  ' PWM not (P_INVERT_OUTPUT | P_BITDAC | P_PWM_TRIANGLE | P_OE)
+	byte	$50, $40, $00, $00
+'-' adc_fram        LONG    0                       ' set ADC to full PWM frame counts [was: LONG    FRAME]
+	byte	$00, $00, $00, $00
+'-' fram            LONG    0                       ' PWM frame: width=FRAME/2, div sysclk by 1 (no division) [was: LONG (FRAME / 2) << 16 + 1 ]
+	byte	$00, $00, $00, $00
+'-' bias            LONG    0                       ' PWM center-frame bias [was: LONG    FRAME / 4]
+	byte	$00, $00, $00, $00
+'-' third           LONG    1 FRAC 3                ' 120 degrees
+	byte	$55, $55, $55, $55
+'-' numerator       LONG    3300 << 11              ' numerator for ADC calculations, configured from init to match the adc_fram count rather than 1 << 11
+	byte	$00, $20, $67, $00
+'-' maxNeg          LONG    $FFFF_FFFF              ' 32-bits of one (max negative signed value)
+	byte	$ff, $ff, $ff, $ff
+'-' sync_required   LONG    0                       ' non zero if motor loop should wait to start
+	byte	$00, $00, $00, $00
+'-' 
+'-'     ' -----------------------------------
+'-'     ' Logic Analyzer Instrumentation Code
+'-'     ' -----------------------------------
+'-' {
+'-' '}
+'-' 
+'-' adc_modes       LONG    p_adc_gio | p_count_highs  ' +0 : adc modes, by state
+	byte	$1e, $00, $10, $00
+'-'                 LONG    p_adc_vio | p_count_highs  ' +1
+	byte	$1e, $80, $10, $00
+'-'                 LONG    p_adc_1x | p_count_highs   ' +2
+	byte	$1e, $80, $11, $00
+'-' 
+'-' ' turn motor to view hall sequence ...  learn in known direction
+'-' '   efficient: low current draw at given speed
+'-' 
+'-' ' max frequency is this...
+'-' ' max ramp rate is this...
+'-' 
+'-' ' old bit shift up by 3 then new bits
+'-' '   old is outer index
+'-' '   new is inner index
+'-' deltas          BYTE    0,  0,  0,  0,  0,  0,  0,  0  ' Hall-effect-sensor position deltas from (old<<3 | new)
+	byte	$00, $00, $00, $00, $00, $00, $00, $00
+'-'                 BYTE    0,  0,  0, -1,  0,  1,  0,  0
+	byte	$00, $00, $00, $ff, $00, $01, $00, $00
+'-'                 BYTE    0,  0,  0,  1,  0,  0, -1,  0
+	byte	$00, $00, $00, $01, $00, $00, $ff, $00
+'-'                 BYTE    0,  1, -1,  0,  0,  0,  0,  0
+	byte	$00, $01, $ff, $00, $00, $00, $00, $00
+'-'                 BYTE    0,  0,  0,  0,  0, -1,  1,  0
+	byte	$00, $00, $00, $00, $00, $ff, $01, $00
+'-'                 BYTE    0, -1,  0,  0,  1,  0,  0,  0
+	byte	$00, $ff, $00, $00, $01, $00, $00, $00
+'-'                 BYTE    0,  0,  1,  0, -1,  0,  0,  0
+	byte	$00, $00, $01, $00, $ff, $00, $00, $00
+'-'                 BYTE    0,  0,  0,  0,  0,  0,  0,  0
+	byte	$00, $00, $00, $00, $00, $00, $00, $00
+'-' 
+'-' ' 32bit angles
+'-' '  6.5" wheel
+'-' '    1 wheel revolution is 360 degrees
+'-' '   90 tics per 360 degrees
+'-' '    1 tic is 4 degrees
+'-' '    6 tics per tic-cycle
+'-' '   15 tic-cycles per 360 degrees
+'-' '   30 pole motor
+'-' '    1 tic-cycle is 24 degrees
+'-' '
+'-' '  docoEng.com 4k RPM 24v motor
+'-' '    1 shaft revolution is 360 degrees
+'-' '   24 tics per 360 degrees
+'-' '    1 tic is 15 degrees
+'-' '    6 tics per tic-cycle
+'-' '    4 tic-cycles per 360 degrees
+'-' '    8 pole motor
+'-' '    1 tic-cycle is 90 degrees
+'-' '
+'-' '   amount of rotation within hall cycle - 6.5" wheel
+'-' hall_angles     LONG    0           '-%000- can't happen forward-direction table
+	byte	$00, $00, $00, $00
+'-'                 LONG    0 frac 6    '%001
+	byte	$00, $00, $00, $00
+'-'                 LONG    4 frac 6    '%010
+	byte	$aa, $aa, $aa, $aa
+'-'                 LONG    5 frac 6    '%011
+	byte	$55, $55, $55, $d5
+'-'                 LONG    2 frac 6    '%100
+	byte	$55, $55, $55, $55
+'-'                 LONG    1 frac 6    '%101
+	byte	$aa, $aa, $aa, $2a
+'-'                 LONG    3 frac 6    '%110
+	byte	$00, $00, $00, $80
+'-'                 LONG    0           '-%111- can't happen
+	byte	$00, $00, $00, $00
+'-' 
+'-'                 LONG    0           '-%000- can't happen - reverse-direction table
+	byte	$00, $00, $00, $00
+'-'                 LONG    5 frac 6    '%001
+	byte	$55, $55, $55, $d5
+'-'                 LONG    3 frac 6    '%010
+	byte	$00, $00, $00, $80
+'-'                 LONG    4 frac 6    '%011
+	byte	$aa, $aa, $aa, $aa
+'-'                 LONG    1 frac 6    '%100
+	byte	$aa, $aa, $aa, $2a
+'-'                 LONG    0 frac 6    '%101
+	byte	$00, $00, $00, $00
+'-'                 LONG    2 frac 6    '%110
+	byte	$55, $55, $55, $55
+'-'                 LONG    0           '-%111- can't happen
+	byte	$00, $00, $00, $00
+'-' 
+'-' tmpX            res 1       ' miscellaneous
+'-' tmpY            res 1
+'-' ' measurements
+'-' drvrSrtTix      res 1
+'-' ctrlSrtTix      res 1
+'-' ctrlEndTix      res 1
+'-' ' driver inputs
+'-' tgt_incr        res 1       ' current user requested target increment
+'-' prior_incr      res 1       ' prior user requested target increment
+'-' sv_tgt_incr     res 1       ' holding area for prior value
+'-' ' control loop variables
+'-' drv_incr        res 1       ' current driver increment
+'-' ' ramp up rate, down is always fast
+'-' curr_ramp       res 1       ' ramp to add/sub from drv_incr
+'-' final_ramp      res 1       ' from current to target
+'-' ramp_curr       res 1       ' current ramping up value, ramps up from ramp_min_ to ramp_max_
+'-' 
+'-' ' driver actual
+'-' angle_          res 1       ' current driver angle
+'-' prior_angle     res 1       ' prior driver angle
+'-' fwdrev          res 1       ' driver current direction used for indexing into hall angle table
+'-' driveoff        res 1       ' pwm enabled (0) or disabled (1)
+'-' curr_stop       res 1       ' current stop mode
+'-' ' debug variables
+'-' {
+'-' '}
+'-' 
+'-' ' temp hold areas
+'-' ' used when tracking down PWM drive problem...
+'-' 'driveUsav_      res 1       ' unmodified value from cordic math
+'-' 
+'-' ' PIN names -  single-pin variables, 14 pins, pwm x is not used
+'-' pin_adc_u_i     res 1       ' basepin + 0
+'-' pin_adc_v_i     res 1       ' basepin + 1
+'-' pin_adc_w_i     res 1       ' basepin + 2
+'-' pin_adc_x_i     res 1       ' basepin + 3
+'-' pin_adc_cur_i   res 1       ' basepin + 4
+'-' pin_hall_u      res 1       ' basepin + 5
+'-' pin_hall_v      res 1       ' basepin + 6
+'-' pin_hall_w      res 1       ' basepin + 7
+'-' pin_pwm_u_l     res 1       ' basepin + 8
+'-' pin_pwm_u_h     res 1       ' basepin + 9
+'-' pin_pwm_v_l     res 1       ' basepin + 10
+'-' pin_pwm_v_h     res 1       ' basepin + 11
+'-' pin_pwm_w_l     res 1       ' basepin + 12
+'-' pin_pwm_w_h     res 1       ' basepin + 13
+'-' 
+'-' '  ADC variables
+'-' gio_levels      res 4
+'-' vio_levels                      ' vio and scl are never used at the same time, so overlap
+'-' scl_levels      res 4
+'-' ' ------------------------------
+'-' '  PRECISE FORMAT:
+'-' '   copied in-to driver each loop iteration
+'-' params_ptr_ res 1           ' params_ptr must be followed by:
+'-' offset_fwd_ res 1           '  14 (DRVR_PARAMS_LONGS_COUNT) parameters
+'-' offset_rev_ res 1
+'-' duty_min_   res 1           ' minimum duty cycle for pwm
+'-' duty_max_   res 1           ' maximum duty cycle for pwm
+'-' duty_up_    res 1           ' up rate for duty cycle for pwm
+'-' duty_dn_    res 1           ' down rate for duty cycle for pwm
+'-' dead_gap_   res 1           ' gap between driving high and low side pwm
+'-' ramp_down_  res 1           ' angle decrement when slowing down
+'-' cfg_ctcks_  res 1           ' clocks for drv loop
+'-' stop_mode_  res 1           ' float or brake mode
+'-' e_stop_     res 1           ' T/F where T means stopal motor function
+'-' ramp_max_   res 1           ' angle increment: max rap up every 500 uSec
+'-' ramp_min_   res 1           ' angle increment: start of ramp up every 500 uSec
+'-' ramp_inc_   res 1           ' angle increment: inc every 500uSec from min to max
+'-' 
+'-' ' ------------------------------
+'-' '  PRECISE FORMAT:
+'-' '   copied out-of driver each loop iteration
+'-' drive_u_    res 1           ' 14 (DRVR_STATUS_LONGS_COUNT) contiguous longs for return data structure
+'-' drive_v_    res 1
+'-' drive_w_    res 1
+'-' sense_u_    res 1
+'-' sense_v_    res 1
+'-' sense_w_    res 1
+'-' sense_i_    res 1
+'-' hall_       res 1
+'-' pos_        res 1
+'-' duty_       res 1
+'-' err_        res 1
+'-' loop_dtcks_ res 1
+'-' loop_ctcks_ res 1
+'-' drv_state_  res 1           ' enum: DCS_STOPPED, DCS_SPIN_UP, DCS_AT_SPEED, DCS_SPIN_DN, etc
+'-' ' fault is here... (but external only)
+'-' 
+'-' ' $1f8 for reg cogs
+'-'     fit     496  ' 443 currently works
+'-'     fit     496  ' 443 currently works
+	byte	$00, $00, $00, $00, $08, $00, $00, $00, $10, $00, $00, $00, $20, $00, $00, $00
+	byte	$28, $00, $00, $00, $02, $00, $00, $00, $03, $00, $00, $00, $04, $00, $00, $00
+	byte	$05, $00, $00, $00, $06, $00, $00, $00, $07, $00, $00, $00, $08, $00, $00, $00
+	byte	$01, $00, $00, $00, $02, $00, $00, $00, $03, $00, $00, $00, $04, $00, $00, $00
+	byte	$05, $00, $00, $00, $06, $00, $00, $00, $07, $00, $00, $00, $08, $00, $00, $00
+	byte	$09, $00, $00, $00, $00, $00, $00, $00, $01, $00, $00, $00, $1e, $00, $00, $00
+	byte	$1f, $00, $00, $00, $20, $00, $00, $00, $02, $00, $00, $00, $03, $00, $00, $00
+	byte	$04, $00, $00, $00, $05, $00, $00, $00, $06, $00, $00, $00, $07, $00, $00, $00
+	byte	$08, $00, $00, $00, $21, $00, $00, $00, $21, $00, $00, $00, $27, $00, $00, $00
+	byte	$28, $00, $00, $00, $24, $00, $00, $00, $25, $00, $00, $00, $2d, $00, $00, $00
+	byte	$34, $00, $00, $00, $35, $00, $00, $00, $35, $00, $00, $00, $35, $00, $00, $00
+	byte	$36, $00, $00, $00, $36, $00, $00, $00, $35, $00, $00, $00, $02, $00, $00, $00
+	byte	$03, $00, $00, $00, $04, $00, $00, $00, $05, $00, $00, $00, $06, $00, $00, $00
+	byte	$07, $00, $00, $00, $08, $00, $00, $00, $c0, $5d, $0d, $e9, $20, $19, $dd, $ee
+	byte	$c0, $7c, $17, $e3, $00, $97, $df, $e8, $a0, $2c, $35, $e5, $00, $4f, $f7, $e6
+	byte	$00, $f5, $94, $e4, $40, $a2, $f2, $16, $e0, $e6, $22, $11, $40, $83, $e8, $1c
+	byte	$00, $69, $20, $17, $60, $d3, $ca, $1a, $00, $b1, $08, $19, $00, $0b, $6b, $1b
+	byte	$80, $05, $31, $ef, $c0, $f5, $83, $df, $40, $4e, $08, $ec, $00, $b2, $96, $e9
+	byte	$80, $00, $47, $e8, $80, $5e, $fc, $e3, $40, $d0, $b1, $e8, $80, $fa, $ce, $10
+	byte	$40, $0a, $7c, $20, $c0, $b1, $f7, $13, $00, $4e, $69, $16, $80, $ff, $b8, $17
+	byte	$80, $a1, $03, $1c, $c0, $2f, $4e, $17, $01, $00, $00, $00, $02, $00, $00, $00
+	byte	$03, $00, $00, $00, $04, $00, $00, $00, $05, $00, $00, $00, $06, $00, $00, $00
+	byte	$07, $00, $00, $00, $08, $00, $00, $00, $80, $4a, $5d, $05, $80, $4a, $5d, $05
+	byte	$80, $4a, $5d, $05, $40, $1a, $c8, $05, $00, $0e, $27, $07, $c0, $0a, $c3, $08
+	byte	$00, $83, $40, $0a, $00, $83, $40, $0a, $80, $b5, $a2, $fa, $80, $b5, $a2, $fa
+	byte	$80, $b5, $a2, $fa, $c0, $e5, $37, $fa, $00, $f2, $d8, $f8, $40, $f5, $3c, $f7
+	byte	$00, $7d, $bf, $f5, $00, $7d, $bf, $f5, $01, $00, $00, $00, $02, $00, $00, $00
+	byte	$03, $00, $00, $00, $04, $00, $00, $00, $05, $00, $00, $00, $06, $00, $00, $00
+	byte	$07, $00, $00, $00, $08, $00, $00, $00, $09, $00, $00, $00, $00, $00, $c0, $40
+	byte	$cd, $cc, $ec, $40, $9a, $99, $31, $41, $00, $00, $40, $41, $cd, $cc, $6c, $41
+	byte	$00, $00, $94, $41, $9a, $99, $b1, $41, $00, $00, $c0, $41, $33, $33, $cf, $41
+	alignl
+__system__dat_
+	byte	$00[8]
+	byte	$03, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+	byte	$00, $00, $00, $00, $00, $00, $00, $00
+objmem
+	long	0[1]
+	org	COG_BSS_START
+_var01
+	res	1
+_var02
+	res	1
+_var03
+	res	1
+arg01
+	res	1
+arg02
+	res	1
+arg03
+	res	1
+arg04
+	res	1
+arg05
+	res	1
+local01
+	res	1
+local02
+	res	1
+local03
+	res	1
+local04
+	res	1
+local05
+	res	1
+local06
+	res	1
+local07
+	res	1
+local08
+	res	1
+local09
+	res	1
+local10
+	res	1
+local11
+	res	1
+local12
+	res	1
+local13
+	res	1
+local14
+	res	1
+local15
+	res	1
+local16
+	res	1
+local17
+	res	1
+local18
+	res	1
+local19
+	res	1
+local20
+	res	1
+local21
+	res	1
+local22
+	res	1
+local23
+	res	1
+local24
+	res	1
+local25
+	res	1
+local26
+	res	1
+local27
+	res	1
+muldiva_
+	res	1
+muldivb_
+	res	1
+	fit	480

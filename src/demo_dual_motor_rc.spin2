@@ -13,41 +13,44 @@
 
 CON { timing }
 
-  CLK_FREQ = 270_000_000                                        ' system freq as a constant
-  _clkfreq = CLK_FREQ                                           ' set system clock
+    CLK_FREQ = 270_000_000                                      ' system freq as a constant
+    _clkfreq = CLK_FREQ                                         ' set system clock
 
 CON { fixed io pins }
 
-  RX1      = 63  { I }                                          ' programming / debug
-  TX1      = 62  { O }
+    RX1 = 63     { I }                                          ' programming / debug
+    TX1 = 62     { O }
 
-  SF_CS    = 61  { O }                                          ' serial flash
-  SF_SCK   = 60  { O }
-  SF_SDO   = 59  { O }
-  SF_SDI   = 58  { I }
+    SF_CS = 61   { O }                                          ' serial flash
+    SF_SCK = 60  { O }
+    SF_SDO = 59  { O }
+    SF_SDI = 58  { I }
 
-  LA_CHAN0 = 56  { O }
-  LA_CHAN1 = 57  { O }
-
-  SBUS_RX  = 58  { I }
+    SBUS_RX = 58 { I }
+    RSL_P = 56
+    ALARM = 57
 
 
 
 OBJ { our Drive Subsystem }
 
-    user        : "isp_bldc_motor_userconfig"       ' driver configuration
-    wheels      : "isp_steering_2wheel"                    ' the dual-drive BLDC motors
-    remoteCtl   : "isp_flysky_rx"                   ' the FlySky Transmitter
+    user : "isp_bldc_motor_userconfig"              ' driver configuration
+    wheels : "isp_steering_2wheel"                         ' the dual-drive BLDC motors
+    remoteCtl : "isp_flysky_rx"                     ' the FlySky Transmitter
+
+    rsl : "testdrive_rsl"
 
 VAR
 
-    long    remoteCog
+    long remoteCog
 
 
 PUB main() | statusOK, basePinLt, basePinRt, voltage, motor, detectModeLt, detectModeRt
 '' DEMO Driving a two wheeled platform
 
     debug("* demo dual motor control via R/C")
+    pinl(ALARM)
+    rsl.start(RSL_P, 500)
 
     ' validate user settings/choicess
     '  do NOT start motor unless all are legit!
@@ -96,58 +99,24 @@ PUB main() | statusOK, basePinLt, basePinRt, voltage, motor, detectModeLt, detec
 
     debug("* DONE")
 
-PRI waitUntilMotorReady()
-    if wheels.isReady() == false
-        debug("* wait motors ready...")
-        repeat
-            if wheels.isReady()
-                quit
-            else
-                waitms(2)
-    debug("* Motors ready, let's drive!")
-
-
-PRI waitUntilMotorDone()
-    if wheels.isStarting() == false
-         debug("* wait until motors start...")
-         repeat
-            if wheels.isStarting()
-                quit
-            else
-                waitms(2)
-
-    if wheels.isStopped() == false
-        debug("* wait until motors finish...")
-        repeat
-            if wheels.isStopped()
-                quit
-            else
-                waitms(2)
-    debug("* Motors stopped!")
-
 CON
 
-   VALUE_NOT_SET = -2
+    VALUE_NOT_SET = -2
 
 VAR
 
-    long    priorSpeed
-    long    priorDirection
-    long    rcSpeed
-    long    rcDirection
-    long    nLtAmps
-    long    nLtWatts
-    long    nRtAmps
-    long    nRtWatts
+    long priorSpeed
+    long priorDirection
+    long rcSpeed
+    long rcDirection
 
-    long    bLastShowState
-    long    bLastEmerCutoff
-    long    bLastIgnoreJoyStks
-    long    bLastShowDriveStates
-    long    nAccelerationRate
-    long    nDoingOneRotation
+    long bLastShowState
+    long bLastEmerCutoff
+    long bLastIgnoreJoyStks
+    long bLastShowDriveStates
+    long nAccelerationRate
 
-PUB remoteControlMotor() | bIgnoreJoySticks, bDoneTesting, bShowState, loopCt, bShowDebugStatus, bEmerCutoff, bShowDriveStates, accrate, bOneRotation
+PUB remoteControlMotor() | bIgnoreJoySticks, bBrakeMode, bAlarm, bEmerCutoff, bShowDriveStates, accrate, rngMin, rngMax
 '' Listen to FlySky and control motor, get status based on Switch/Joystick inputs
     waitms(500)    ' wait for 1/2 sec for backend to catch up
 
@@ -156,13 +125,12 @@ PUB remoteControlMotor() | bIgnoreJoySticks, bDoneTesting, bShowState, loopCt, b
     debug("- Lt Joy Hz - direction")
     debug("- Rt Joy Vt - speed")
     debug("------")
-    debug("* swA DN     - enable joystick servo control")
-    debug("* swB Toggle - show state")
+    debug("* swA DN     - enable joystick drive control")
+    debug("* swB DN     - alarm")
     'debug("* swC UP     - ---")
     'debug("* swC MID    - ---")
     debug("* swC DN     - end control")
     debug("* swD DN     - emer cutoff")
-    debug("* swE DN     - 1 rotation")
     debug("* VRA        - acceleration")
     debug("------")
 
@@ -171,40 +139,19 @@ PUB remoteControlMotor() | bIgnoreJoySticks, bDoneTesting, bShowState, loopCt, b
     bLastEmerCutoff := VALUE_NOT_SET ' value can't happen
     bLastShowDriveStates := VALUE_NOT_SET ' value can't happen
 
-    loopCt := 0
     repeat
-        'debug("* ", udec_long(loopCt))
-        bShowDebugStatus := FALSE 'loopCt < 2 ? TRUE : FALSE
-        'remoteCtl.showDebug(bShowDebugStatus)
-
-        ' SwA Ignore JoySticks
-        'debug("-- -- SW -- --")
-        bIgnoreJoySticks := remoteCtl.swIsOn(remoteCtl.CTL_SW_A)
-        bShowState := remoteCtl.swIsOff(remoteCtl.CTL_SW_B)
-        ' SwC done, end loop!
-        bDoneTesting := remoteCtl.swIsOff(remoteCtl.CTL_SW_C)
-        bShowDriveStates := remoteCtl.swIsMiddle(remoteCtl.CTL_SW_C)
-        ' SwD down = Emergency Cutoff
-        remoteCtl.showDebug(bShowDebugStatus)
+        bIgnoreJoySticks := remoteCtl.swIsOn(remoteCtl.CTL_SW_A) or remoteCtl.readFailsafe()
+        bAlarm := remoteCtl.swIsOff(remoteCtl.CTL_SW_B)
+        bBrakeMode := remoteCtl.swIsOff(remoteCtl.CTL_SW_C)
         bEmerCutoff := remoteCtl.swIsOff(remoteCtl.CTL_SW_D)
-        remoteCtl.showDebug(FALSE)
-
-        bOneRotation := remoteCtl.swIsOn(remoteCtl.CH_11)
-
-        accrate := remoteCtl.readchannel(remoteCtl.CTL_VRA)/10
+        rngMin, rngMax := remoteCtl.chanMinMax(remoteCtl.CTL_VRA)
+        accrate := map(remoteCtl.readchannel(remoteCtl.CTL_VRA), rngMin, rngMax, 5, 150)
 
         if bLastShowDriveStates <> bShowDriveStates
             debug("- sho ", sdec_long_(bShowDriveStates))
             if bShowDriveStates
                 wheels.showDriveStates()
             bLastShowDriveStates := bShowDriveStates
-
-        if bShowState <> bLastShowState
-            'showServoPositions()
-            if bShowState
-                nLtAmps, nLtWatts, nRtAmps, nRtWatts := wheels.getCurrent()
-                debug("  ltA=", sdec_long_(nLtAmps), ", rtA=", sdec_long_(nRtAmps))
-            bLastShowState := bShowState
 
         if bEmerCutoff <> bLastEmerCutoff
             'debug("  NEW E VALUE")
@@ -219,7 +166,7 @@ PUB remoteControlMotor() | bIgnoreJoySticks, bDoneTesting, bShowState, loopCt, b
                     debug("  Motor Disabled")
             bLastEmerCutoff := bEmerCutoff
 
-        if not bShowDebugStatus and bLastIgnoreJoyStks <> bIgnoreJoySticks
+        if bLastIgnoreJoyStks <> bIgnoreJoySticks
             if bIgnoreJoySticks
                 debug("  Motor CTL OFF")
             else
@@ -246,47 +193,37 @@ PUB remoteControlMotor() | bIgnoreJoySticks, bDoneTesting, bShowState, loopCt, b
                 wheels.driveDirection(rcSpeed, rcDirection)
                 priorDirection := rcDirection
                 priorSpeed := rcSpeed
-            elseif bOneRotation == false and nDoingOneRotation == false         ' no emergency cutoff and no joystick before accept 1 rotation
-                nDoingOneRotation := true
-                doOneRotation()
-            elseif bOneRotation == true and nDoingOneRotation == true           ' switch must be reset before allowed again
-                nDoingOneRotation := false
 
-        if bDoneTesting
-            debug("--> quit loop")
-            quit
+        if bAlarm
+            pinh(ALARM)
+        else
+            pinl(ALARM)
 
-        waitms(250) ' wait 1/4 second, before next loop
-        loopCt++
+        if not bEmerCutoff and not bIgnoreJoysticks
+            rsl.set_state(2)
+        else
+            rsl.set_state(1)
 
-    ' done, stop our motors
+        wheels.holdAtStop(bBrakeMode)
+
+        waitms(10)
+        rsl.update()
+
     wheels.stop()
 
-PRI doOneRotation() | ltdegree, rtdegree
-
-    ltdegree, rtdegree := wheels.getRotationCount(wheels.DRU_DEGREES)           ' get current wheel rotation
-    wheels.driveDirection(10, 0)                                                ' drive forward slowly
-    debug("  Onrotation Driving:", sdec(ltdegree), " ", sdec(rtdegree))
-    wheels.stopAfterRotation(ltdegree+360, wheels.DRU_DEGREES)                  ' stop after 360degree wheel rotation
-    ltdegree, rtdegree := wheels.getRotationCount(wheels.DRU_DEGREES)           ' get current wheel rotation
-    debug("  Onrotation Stopped:", sdec(ltdegree), " ", sdec(rtdegree))
-    waitms(1000)
-    ltdegree, rtdegree := wheels.getRotationCount(wheels.DRU_DEGREES)           ' get current wheel rotation
-    debug("  Onrotation Check:", sdec(ltdegree), " ", sdec(rtdegree))
-
-PRI updPosnBothJoy(): speed, direction | rawSpeed, rawDirection, rngMin, rngMax
+PRI updPosnBothJoy() : speed, direction | rawSpeed, rawDirection, rngMin, rngMax
     ' route Rt Joystick Vt (spring center) to FWD/REV (speed)
     'debug("-- JOY -- JOY --")
     rawSpeed := remoteCtl.readChannel(remoteCtl.CTL_RT_JOY_VT)
     rngMin, rngMax := remoteCtl.chanMinMax(remoteCtl.CTL_RT_JOY_VT)
-    speed := map(rawSpeed, rngMin, rngMax, -100, +100)
+    speed := map(rawSpeed, rngMin, rngMax, -100, 100)
 
     ' route Lt Joystick Hz (spring center) to direction
     rawDirection := remoteCtl.readChannel(remoteCtl.CTL_LT_JOY_HZ)
     rngMin, rngMax := remoteCtl.chanMinMax(remoteCtl.CTL_LT_JOY_HZ)
-    direction := map(rawDirection, rngMin, rngMax, -100, +100)
+    direction := map(rawDirection, rngMin, rngMax, -100, 100)
 
-PRI map(inValue,  inMin,  inMax,  outMin,  outMax) : outValue
+PRI map(inValue, inMin, inMax, outMin, outMax) : outValue
 {
     REF: https://www.arduino.cc/reference/en/language/functions/math/map
 
@@ -310,10 +247,10 @@ PRI map(inValue,  inMin,  inMax,  outMin,  outMax) : outValue
     The map() function uses integer math so will not generate fractions, when the math might indicate that
     it should do so. Fractional remainders are truncated, and are not rounded or averaged.
 }
-    if (inValue <= inMin)
+    if(inValue <= inMin)
         outValue := outMin
-    elseif (inValue >= inMax)
-        outValue :=  outMax
+    elseif(inValue >= inMax)
+        outValue := outMax
     else
         outValue := (inValue - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
 

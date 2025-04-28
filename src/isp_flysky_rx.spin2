@@ -166,6 +166,9 @@ PUB readSw3Way(swChan) : eSwState | rawValue
         'term.fstr2(string("- readSw3Way(%d) - %d\r\n"), validSwChan, eSwState)
         debug("- readSw3Way(", udec_(swChan), ") - ", udec(eSwState))
 
+PUB readFailsafe() : fs
+    return sbus.in_failsafe()
+
 PUB showSbus() | ch, pos, x, y
     '' Show status indication
 
