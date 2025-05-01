@@ -1,0 +1,655 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 320 480"
+   version="1.1"
+   id="svg14"
+   sodipodi:docname="page1-default.svg"
+   inkscape:version="1.4 (86a8ad7, 2024-10-11)"
+   inkscape:export-filename="page1-default.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs14">
+    <pattern
+       inkscape:collect="always"
+       xlink:href="#Strips2_1"
+       preserveAspectRatio="xMidYMid"
+       id="pattern47"
+       patternTransform="matrix(2.1213203,-2.1213203,2.1213203,2.1213203,0,0)"
+       x="0"
+       y="0" />
+    <pattern
+       inkscape:collect="always"
+       xlink:href="#Strips2_1"
+       preserveAspectRatio="xMidYMid"
+       id="pattern46"
+       patternTransform="matrix(2.1213203,-2.1213203,2.1213203,2.1213203,0,0)"
+       x="0"
+       y="0" />
+    <pattern
+       inkscape:collect="always"
+       xlink:href="#Strips2_1"
+       preserveAspectRatio="xMidYMid"
+       id="pattern45"
+       patternTransform="matrix(2.1213203,-2.1213203,2.1213203,2.1213203,0,0)"
+       x="0"
+       y="0" />
+    <pattern
+       inkscape:collect="always"
+       xlink:href="#Strips2_1"
+       preserveAspectRatio="xMidYMid"
+       id="pattern44"
+       patternTransform="matrix(2.1213203,-2.1213203,2.1213203,2.1213203,0,0)"
+       x="0"
+       y="0" />
+    <pattern
+       inkscape:collect="always"
+       xlink:href="#Strips2_1"
+       preserveAspectRatio="xMidYMid"
+       id="pattern43"
+       patternTransform="matrix(2.1213203,-2.1213203,2.1213203,2.1213203,0,0)"
+       x="0"
+       y="0" />
+    <pattern
+       inkscape:collect="always"
+       patternUnits="userSpaceOnUse"
+       width="1.5"
+       height="1"
+       patternTransform="translate(0,0) scale(2,2)"
+       preserveAspectRatio="xMidYMid"
+       id="Strips2_1"
+       style="fill:#0f172a"
+       inkscape:stockid="Stripes 12 (2:1)"
+       inkscape:isstock="true"
+       inkscape:label="Stripes 12 (2:1)">
+      <rect
+         style="stroke:none"
+         x="0"
+         y="-0.5"
+         width="1"
+         height="2"
+         id="rect197" />
+    </pattern>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath24">
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:0.999999;stroke-linecap:butt;stroke-linejoin:bevel;paint-order:stroke markers fill;stop-color:#000000"
+         id="rect34"
+         width="44.999748"
+         height="77.937294"
+         x="251.53429"
+         y="222.73541" />
+    </clipPath>
+    <inkscape:path-effect
+       effect="fillet_chamfer"
+       id="path-effect22"
+       is_visible="true"
+       lpeversion="1"
+       nodesatellites_param="F,0,0,1,0,2.5567183,0,1 @ F,0,0,1,0,2.5567183,0,1 @ F,0,0,1,0,2.5567183,0,1 @ F,0,0,1,0,2.5567183,0,1"
+       radius="4"
+       unit="px"
+       method="auto"
+       mode="F"
+       chamfer_steps="1"
+       flexible="false"
+       use_knot_distance="true"
+       apply_no_radius="true"
+       apply_with_radius="true"
+       only_selected="false"
+       hide_knots="false" />
+    <inkscape:path-effect
+       effect="fillet_chamfer"
+       id="path-effect21"
+       is_visible="true"
+       lpeversion="1"
+       nodesatellites_param="F,0,0,1,0,6.4453959,0,1 @ F,0,0,1,0,6.4453959,0,1 @ F,0,0,1,0,6.4453959,0,1 @ F,0,0,1,0,6.4453959,0,1"
+       radius="10"
+       unit="px"
+       method="bezier"
+       mode="F"
+       chamfer_steps="1"
+       flexible="false"
+       use_knot_distance="true"
+       apply_no_radius="true"
+       apply_with_radius="true"
+       only_selected="false"
+       hide_knots="false" />
+  </defs>
+  <sodipodi:namedview
+     id="namedview14"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="8.4891852"
+     inkscape:cx="148.60083"
+     inkscape:cy="148.36524"
+     inkscape:window-width="2560"
+     inkscape:window-height="1571"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg14" />
+  <!-- Background -->
+  <rect
+     x="0"
+     y="0"
+     width="320"
+     height="480"
+     fill="#1e293b"
+     id="rect1" />
+  <!-- Header -->
+  <rect
+     x="0"
+     y="0"
+     width="320"
+     height="40"
+     fill="#0f172a"
+     id="rect2" />
+  <text
+     x="160"
+     y="25"
+     font-family="Arial, sans-serif"
+     font-size="18"
+     font-weight="bold"
+     fill="#ffffff"
+     text-anchor="middle"
+     id="text2">P2 TestDrive</text>
+  <!-- Motor Watts Section -->
+  <rect
+     x="10"
+     y="50"
+     width="300"
+     height="120"
+     fill="#334155"
+     rx="5"
+     id="rect3" />
+  <text
+     x="20"
+     y="70"
+     font-family="Arial, sans-serif"
+     font-size="14"
+     fill="#ffffff"
+     id="text3">Motor Watts</text>
+  <!-- Motor Watts Graph Area -->
+  <rect
+     x="20"
+     y="80"
+     width="180"
+     height="80"
+     fill="#1e293b"
+     stroke="#64748b"
+     stroke-width="1"
+     id="rect4" />
+  <!-- Motor Watts Value Display - Motor 1 -->
+  <rect
+     x="210"
+     y="80"
+     width="90"
+     height="35"
+     fill="#0f172a"
+     stroke="#64748b"
+     stroke-width="1"
+     id="rect5"
+     style="fill:url(#pattern47);fill-opacity:1;stroke:#f8d257;stroke-opacity:1" />
+  <text
+     x="215"
+     y="94.831543"
+     font-family="Arial, sans-serif"
+     font-size="10px"
+     fill="#94a3b8"
+     id="text5"><tspan
+       sodipodi:role="line"
+       id="tspan14"
+       x="215"
+       y="94.831543">Left Watts</tspan><tspan
+       sodipodi:role="line"
+       id="tspan15"
+       x="215"
+       y="107.33154">Placeholder</tspan></text>
+  <!-- Motor Watts Value Display - Motor 2 -->
+  <rect
+     x="210"
+     y="125"
+     width="90"
+     height="35"
+     fill="#0f172a"
+     stroke="#64748b"
+     stroke-width="1"
+     id="rect6"
+     style="fill:url(#pattern46);fill-opacity:1;stroke:#57acf8;stroke-opacity:1" />
+  <text
+     x="215"
+     y="139.77051"
+     font-family="Arial, sans-serif"
+     font-size="10px"
+     fill="#94a3b8"
+     id="text6"><tspan
+       sodipodi:role="line"
+       id="tspan16"
+       x="215"
+       y="139.77051">Right Watts</tspan><tspan
+       sodipodi:role="line"
+       id="tspan17"
+       x="215"
+       y="152.27051">Placeholder</tspan></text>
+  <!-- Applied Speed Section -->
+  <rect
+     x="10"
+     y="180"
+     width="300"
+     height="120"
+     fill="#334155"
+     rx="5"
+     id="rect7" />
+  <text
+     x="20"
+     y="200"
+     font-family="Arial, sans-serif"
+     font-size="14"
+     fill="#ffffff"
+     id="text7">Applied Speed</text>
+  <!-- Applied Speed Graph Area -->
+  <rect
+     x="20"
+     y="-290"
+     width="180"
+     height="80"
+     fill="#1e293b"
+     stroke="#64748b"
+     stroke-width="1"
+     id="rect8"
+     transform="scale(1,-1)" />
+  <!-- Applied Speed Value Display - Motor 1 -->
+  <rect
+     x="210"
+     y="210"
+     width="90"
+     height="35"
+     fill="#0f172a"
+     stroke="#64748b"
+     stroke-width="1"
+     id="rect9"
+     style="fill:url(#pattern45);fill-opacity:1;stroke:#f8d257;stroke-opacity:1" />
+  <text
+     x="215"
+     y="224.83154"
+     font-family="Arial, sans-serif"
+     font-size="10px"
+     fill="#94a3b8"
+     id="text9"><tspan
+       sodipodi:role="line"
+       id="tspan18"
+       x="215"
+       y="224.83154">Left Speed</tspan><tspan
+       sodipodi:role="line"
+       id="tspan19"
+       x="215"
+       y="237.33154">Placeholder</tspan></text>
+  <!-- Applied Speed Value Display - Motor 2 -->
+  <rect
+     x="210"
+     y="255"
+     width="90"
+     height="35"
+     fill="#0f172a"
+     stroke="#64748b"
+     stroke-width="1"
+     id="rect10"
+     style="fill:url(#pattern44);fill-opacity:1;stroke:#57acf8;stroke-opacity:1" />
+  <text
+     x="215"
+     y="269.83154"
+     font-family="Arial, sans-serif"
+     font-size="10px"
+     fill="#94a3b8"
+     id="text10"><tspan
+       sodipodi:role="line"
+       id="tspan20"
+       x="215"
+       y="269.83154">Right Speed</tspan><tspan
+       sodipodi:role="line"
+       id="tspan21"
+       x="215"
+       y="282.33154">Placeholder</tspan></text>
+  <!-- Battery Voltage Section -->
+  <rect
+     x="10"
+     y="310"
+     width="300"
+     height="107"
+     fill="#334155"
+     rx="5"
+     id="rect11"
+     style="stroke-width:0.944281" />
+  <text
+     x="20"
+     y="330"
+     font-family="Arial, sans-serif"
+     font-size="14"
+     fill="#ffffff"
+     id="text11">Battery Voltage</text>
+  <!-- Battery Voltage Graph Area -->
+  <rect
+     x="19.95797"
+     y="339.95795"
+     width="180.08406"
+     height="67.084061"
+     fill="#1e293b"
+     stroke="#64748b"
+     stroke-width="0.915939"
+     id="rect12" />
+  <!-- Battery Voltage Value Display -->
+  <rect
+     x="210"
+     y="340"
+     width="90"
+     height="40"
+     fill="#0f172a"
+     stroke="#64748b"
+     stroke-width="1"
+     id="rect13"
+     style="fill:url(#pattern43);fill-opacity:1" />
+  <text
+     x="255"
+     y="365"
+     font-family="Arial, sans-serif"
+     font-size="12px"
+     fill="#94a3b8"
+     text-anchor="middle"
+     id="text13">Volts PlaceH</text>
+  <!-- Footer Status Bar -->
+  <rect
+     x="0"
+     y="424"
+     width="320"
+     height="56"
+     fill="#0f172a"
+     id="rect14"
+     style="stroke-width:1.18322" />
+  <!-- Status Indicator -->
+  <g
+     id="g21"
+     transform="translate(17.9,-1.8632812)"
+     style="stroke-width:2;stroke-dasharray:none">
+    <circle
+       cx="282.5"
+       cy="20.5"
+       r="11"
+       fill="#334155"
+       stroke="#64748b"
+       stroke-width="1"
+       id="circle1"
+       style="stroke-width:2;stroke-dasharray:none" />
+    <rect
+       x="281"
+       y="18.5"
+       width="3"
+       height="8"
+       rx="1.5"
+       fill="#94a3b8"
+       id="rect1-7"
+       style="stroke-width:3.67424;stroke-dasharray:none" />
+    <circle
+       cx="282.5"
+       cy="15.5"
+       r="1.5"
+       fill="#94a3b8"
+       id="circle2"
+       style="stroke-width:2;stroke-dasharray:none" />
+  </g>
+  <text
+     x="160"
+     y="469"
+     font-family="Arial, sans-serif"
+     font-size="14px"
+     fill="#ffffff"
+     text-anchor="middle"
+     id="text14">Robot Enable</text>
+  <rect
+     style="fill:#e0480c;fill-opacity:1;stroke:none;stroke-width:5.04807;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+     id="rect21"
+     width="64"
+     height="20"
+     x="10"
+     y="454"
+     sodipodi:type="rect"
+     ry="11.411066"
+     rx="10.1644" />
+  <g
+     id="g23"
+     transform="translate(0,-22)">
+    <text
+       x="174.47168"
+       y="467"
+       font-family="Arial, sans-serif"
+       font-size="14px"
+       fill="#ffffff"
+       text-anchor="middle"
+       id="text22">SBUS Connection</text>
+    <rect
+       style="fill:#e0480c;fill-opacity:1;stroke:none;stroke-width:5.04807;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+       id="rect22"
+       width="64"
+       height="20"
+       x="10"
+       y="452"
+       sodipodi:type="rect"
+       ry="11.411066"
+       rx="10.1644" />
+  </g>
+  <rect
+     style="fill:#0f172a;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+     id="rect25"
+     width="50"
+     height="50"
+     x="365.13547"
+     y="165.00009" />
+  <rect
+     style="fill:#1e293b;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+     id="rect26"
+     width="50"
+     height="50"
+     x="365.13547"
+     y="215.00009" />
+  <rect
+     style="fill:#334155;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+     id="rect27"
+     width="50"
+     height="50"
+     x="365.13547"
+     y="265.00003" />
+  <rect
+     style="fill:#64748b;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+     id="rect28"
+     width="50"
+     height="50"
+     x="365.13547"
+     y="315.00003" />
+  <rect
+     style="fill:#94a3b8;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+     id="rect29"
+     width="50"
+     height="50"
+     x="365.13547"
+     y="365" />
+  <rect
+     style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+     id="rect30"
+     width="50"
+     height="50"
+     x="365.13547"
+     y="415" />
+  <g
+     id="g2"
+     transform="matrix(1.2222222,0,0,1.2222222,-38.944439,-83.833347)">
+    <rect
+       x="230.5"
+       y="387.5"
+       width="20"
+       height="14"
+       rx="1"
+       fill="#334155"
+       stroke="#64748b"
+       stroke-width="1"
+       id="rect1-0" />
+    <rect
+       x="233.5"
+       y="384.5"
+       width="4"
+       height="3"
+       rx="0.5"
+       fill="#334155"
+       stroke="#64748b"
+       stroke-width="1"
+       id="rect2-6" />
+    <rect
+       x="243.5"
+       y="384.5"
+       width="4"
+       height="3"
+       rx="0.5"
+       fill="#334155"
+       stroke="#64748b"
+       stroke-width="1"
+       id="rect3-0" />
+    <line
+       x1="250.38931"
+       y1="394.5"
+       x2="230.61069"
+       y2="394.5"
+       stroke="#64748b"
+       stroke-width="0.891447"
+       id="line3" />
+    <line
+       x1="250.38931"
+       y1="396.5"
+       x2="230.61069"
+       y2="396.5"
+       stroke="#64748b"
+       stroke-width="0.891447"
+       id="line5" />
+    <line
+       x1="250.38931"
+       y1="392.5"
+       x2="230.61069"
+       y2="392.5"
+       stroke="#64748b"
+       stroke-width="0.891447"
+       id="line6" />
+    <line
+       x1="250.38931"
+       y1="390.5"
+       x2="230.61069"
+       y2="390.5"
+       stroke="#64748b"
+       stroke-width="0.891447"
+       id="line7" />
+    <line
+       x1="250.38931"
+       y1="398.5"
+       x2="230.61069"
+       y2="398.5"
+       stroke="#64748b"
+       stroke-width="0.891447"
+       id="line8" />
+    <line
+       x1="250.38931"
+       y1="398.5"
+       x2="230.61069"
+       y2="398.5"
+       stroke="#64748b"
+       stroke-width="0.891447"
+       id="line9" />
+  </g>
+  <g
+     id="g1"
+     transform="translate(-135.16599,51.379639)">
+    <rect
+       style="fill:#e0480c;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+       id="rect24-6"
+       width="50"
+       height="50"
+       x="550.30096"
+       y="163.62085" />
+    <rect
+       style="fill:#10b981;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+       id="rect24-8-4"
+       width="50"
+       height="50"
+       x="550.30096"
+       y="213.62086" />
+    <rect
+       style="fill:#0f172a;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+       id="rect25-7"
+       width="50"
+       height="50"
+       x="500.30145"
+       y="113.62046" />
+    <rect
+       style="fill:#1e293b;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+       id="rect26-7"
+       width="50"
+       height="50"
+       x="500.30145"
+       y="163.62047" />
+    <rect
+       style="fill:#334155;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+       id="rect27-3"
+       width="50"
+       height="50"
+       x="500.30145"
+       y="213.62041" />
+    <rect
+       style="fill:#64748b;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+       id="rect28-1"
+       width="50"
+       height="50"
+       x="500.30145"
+       y="263.62039" />
+    <rect
+       style="fill:#94a3b8;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+       id="rect29-7"
+       width="50"
+       height="50"
+       x="500.30145"
+       y="313.62036" />
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+       id="rect30-4"
+       width="50"
+       height="50"
+       x="500.30145"
+       y="363.62036" />
+    <rect
+       style="fill:#767676;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+       id="rect31-9"
+       width="50"
+       height="50"
+       x="550.30096"
+       y="113.62037" />
+    <rect
+       style="fill:#f8d257;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+       id="rect15"
+       width="50"
+       height="50"
+       x="550.30096"
+       y="263.62036" />
+    <rect
+       style="fill:#57acf8;fill-opacity:1;stroke:none;stroke-width:2.473;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;paint-order:stroke markers fill"
+       id="rect16"
+       width="50"
+       height="50"
+       x="550.30096"
+       y="313.62036" />
+  </g>
+</svg>

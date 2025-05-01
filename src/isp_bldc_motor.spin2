@@ -593,7 +593,7 @@ PUB getBoardType() : eBoardRev | pSenseCommon, pinSum
                 ' yes, detect the board rev
                 pinSum := 0
                 pSenseCommon := pinbase + 4
-                'debug("BLDC: getBoardType() pinbase=(", udec_(pinbase), "), pSenseCommon=(", uhex_Long_(pSenseCommon), ")")
+                debug("BLDC: getBoardType() pinbase=(", udec_(pinbase), "), pSenseCommon=(", udec_Long_(pSenseCommon), ")")
                 pinhigh(pSenseCommon)                   ' charge 0.1uF capacitor on RevB boards
                 waitms(1)
                 pinfloat(pSenseCommon)                  ' release the pin, ready to read state

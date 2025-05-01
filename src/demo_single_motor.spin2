@@ -13,7 +13,7 @@
 
 CON { timing }
 
-  CLK_FREQ = 270_000_000                                        ' system freq as a constant
+  CLK_FREQ = 200_000_000                                        ' system freq as a constant
   _clkfreq = CLK_FREQ                                           ' set system clock
 
 CON { fixed io pins }
@@ -43,7 +43,7 @@ OBJ { our Motor(s) }
 
 DAT { run-time condition vars }
 
-    bUseHDMI    LONG   TRUE       ' set to TRUE to enable HDMI use/output
+    bUseHDMI    LONG   FALSE       ' set to TRUE to enable HDMI use/output
 
 
 PUB main() | nGroups, pGroupTitles, pGroupNames, pGroupVarCts, pGroupVars, motorCog, senseCog, basePin, voltage, motor, detectMode
@@ -79,9 +79,9 @@ PUB main() | nGroups, pGroupTitles, pGroupNames, pGroupVarCts, pGroupVars, motor
         ' - testing NEW Control Method -
         ' ensure motor is ready be commanded
         waitUntilMotorReady()
-        wheel.setMaxSpeed(100)  ' override 75% with 100% for these tests
+        'wheel.setMaxSpeed(100)  ' override 75% with 100% for these tests
         'wheel.setMaxSpeed(90)  ' override 75% with 90% for these tests
-        'wheel.setMaxSpeed(50)  ' override 75% with 50% for these tests (offset checks)
+        wheel.setMaxSpeed(50)  ' override 75% with 50% for these tests (offset checks)
         'wheel.setMaxSpeed(15)  ' override 75% with 15% for these tests
         ' now drive!
 
@@ -122,13 +122,14 @@ PRI waitUntilMotorReady()
     debug("* Motor ready, let's drive!")
 
 
-PRI waitUntilMotorDone()
+PRI waitUntilMotorDone() | a, w
     if wheel.isStarting() == false
          debug("* wait until motor starts...")
          repeat
             if wheel.isStarting()
                 quit
             else
+                debug(wheel.getCurrent())
                 waitms(2)
 
     if wheel.isStopped() == false
@@ -137,6 +138,8 @@ PRI waitUntilMotorDone()
             if wheel.isStopped()
                 quit
             else
+                a, w := wheel.getCurrent()
+                'debug(udec(a), udec(w))
                 waitms(2)
     debug("* Motor stopped! wait 4ms")
     'waitms(4)

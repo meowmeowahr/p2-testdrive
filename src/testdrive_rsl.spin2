@@ -12,17 +12,39 @@
 ''
 '' =================================================================================================
 
+con
+
+    BUFFER_SIZE = 32
+    CMD_SIZE = 12
+
+dat
+
+        NumCmds byte    1                                      ' number of commands in table
+
+        Commands
+                byte    "askconn"  , 0
+
 obj
 
     tm      :   "jm_ez_timer"                                                   ' timer for flashing
+    nxt     :   "jm_fullduplexserial"                                           ' * nextion IO
+    nstr    :   "jm_nstr"
 
 
 var
 
   byte  running
   byte  state                                                                   ' 0-off, 1-on, 2-flash
+  byte  pstate
   byte  led_pin
   word  update_rate
+
+  byte  serial_buf[BUFFER_SIZE]
+
+  byte  cmdstr[CMD_SIZE]                                        ' command as string
+  byte  valstr[CMD_SIZE]                                        ' value as string
+
+  long  scstack[128]
 
 
 pub null()
@@ -30,7 +52,76 @@ pub null()
 '' This is not a top level object
 
 
-pub start(pin, rate)
+pri get_msg(p_dest) : len | c
+
+'' Receive message from serial into p_dest
+'' -- maxlen specifies maximum length to recieve
+
+  bytefill(p_dest, 0, BUFFER_SIZE)                                ' clear buffer
+
+
+  repeat BUFFER_SIZE-1
+    c := nxt.rxtime(1)                                            ' look for message
+    if c
+      case c
+        0..12 :
+          ifnot c == 8                                            ' backspace
+            byte[p_dest][len++] := c                              ' add to string
+            if (c == $0D)                                         ' if end of hrc
+              return                                              '  done!
+          else
+            byte[p_dest][len--] := c                              ' remove from string
+            next
+
+        13 :                                                      ' ignore cr
+          return
+
+        14..26 :
+          byte[p_dest][len++] := c                                ' add to string
+          if (c == $0D)                                           ' if end of hrc
+            return                                                '  done!
+
+        27 :                                                      ' ignore spaces
+          return
+
+        28..126 :
+          byte[p_dest][len++] := c                                ' add to string
+          if (c == $0D)                                           ' if end of hrc
+            return                                                '  done!
+
+        -1 :
+          return
+    else
+      return
+
+pri cmd_index(p_src, p_list, nc) : idx | byte buf[CMD_SIZE], x, c
+
+'' Convert command string into value
+'' -- not case sensitive
+'' -- returns 1..n if found in command table
+'' -- returns 0 (false) if not found
+
+  bytemove(@buf, p_src, strsize(p_src)+1)                       ' copy string + terminator
+
+  x := 0
+  repeat
+    c := buf[x]
+    if (c == 0)                                                 ' end of string
+      quit
+    elseif ((c >= "A") && (c <= "Z"))                           ' if uppercase
+      buf[x] += 32                                              '  make lowercase
+    x++
+
+  repeat nc
+    if (strcomp(@buf, p_list))
+      return idx+1
+    else
+      idx += 1                                                  ' update index
+      p_list += strsize(p_list) + 1                             ' update list pointer
+
+  return 0
+
+pub start(pin, nxt_rx, nxt_tx, rate)
 
 '' Start rsl
 
@@ -38,6 +129,11 @@ pub start(pin, rate)
     led_pin := pin
     update_rate := rate
     tm.start()
+    nxt.start(nxt_rx, nxt_tx, %0000, 921600)
+
+    ' tx nextion reset codes
+    nxt.fstr0(@"rest\xFF\xFF\xFF")
+    cogspin(newcog, nextion_cog(), @scstack)
 
 
 pub set_state(new_state)
@@ -50,6 +146,8 @@ pub set_state(new_state)
 
     state := new_state
 
+pub set_rate(rate)
+    update_rate := rate
 
 pub update() : result
 
@@ -64,13 +162,80 @@ pub update() : result
         tm.start()                                                              ' reset timer
         return 1
 
+pri nextion_cog() | index
+    repeat
+        get_msg(@serial_buf)
+        if serial_buf
+            index := cmd_index(@serial_buf, @Commands, NumCmds)
+            case index
+                1:
+                    nxt.fstr0(@"page 1\xFF\xFF\xFF")
+
+pub wrspeedleft(speed)
+    nxt.fstr1(@"t3.txt=\q%s\%\q\xFF\xFF\xFF", nstr.dec(speed, 0))
+    nxt.fstr1(@"add 2,0,%s\xFF\xFF\xFF", nstr.dec(map(speed, -100, 100, 0, 255), 0))
+
+pub wrspeedright(speed)
+    nxt.fstr1(@"t2.txt=\q%s\%\q\xFF\xFF\xFF", nstr.dec(speed, 0))
+    nxt.fstr1(@"add 2,1,%s\xFF\xFF\xFF", nstr.dec(map(speed, -100, 100, 0, 255), 0))
+
+pub wrwattleft(watt)
+    nxt.fstr1(@"t0.txt=\q%sW\q\xFF\xFF\xFF", nstr.dec(watt/1000, 0))
+    nxt.fstr1(@"add 1,0,%s\xFF\xFF\xFF", nstr.dec(map(watt/1000, 0, 600, 0, 255), 0))
+
+pub wrwattright(watt)
+    nxt.fstr1(@"t1.txt=\q%sW\q\xFF\xFF\xFF", nstr.dec(watt/1000, 0))
+    nxt.fstr1(@"add 1,1,%s\xFF\xFF\xFF", nstr.dec(map(watt/1000, 0, 600, 0, 255), 0))
+
+pub wrvolts(volts)
+    nxt.fstr1(@"t4.txt=\q%sV\q\xFF\xFF\xFF", nstr.dpdec(volts, 2))
+    nxt.fstr1(@"add 3,0,%s\xFF\xFF\xFF", nstr.dpdec(map(volts, 0, 2900, 0, 255), 0))
+
+pri map(inValue, inMin, inMax, outMin, outMax) : outValue
+{
+    REF: https://www.arduino.cc/reference/en/language/functions/math/map
+
+    Re-maps a number from one range to another. That is, a value of fromLow would get mapped to toLow,
+    a value of fromHigh to toHigh, values in-between to values in-between, etc.
+
+    Does not constrain values to within the range, because out-of-range values are sometimes intended and
+    useful. The constrain() function may be used either before or after this function, if limits to the ranges are desired.
+
+    Note that the "lower bounds" of either range may be larger or smaller than the "upper bounds" so the
+    map() function may be used to reverse a range of numbers, for example
+
+    y = map(x, 1, 50, 50, 1);
+
+    The function also handles negative numbers well, so that this example
+
+    y = map(x, 1, 50, 50, -100);
+
+    is also valid and works well.
+
+    The map() function uses integer math so will not generate fractions, when the math might indicate that
+    it should do so. Fractional remainders are truncated, and are not rounded or averaged.
+}
+    if(inValue <= inMin)
+        outValue := outMin
+    elseif(inValue >= inMax)
+        outValue := outMax
+    else
+        outValue := (inValue - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
+
+
 pri set_rsl()
 
 '' Force update rsl
 
     if state == 0
         pinl(led_pin)
+        nxt.fstr0(@"q1.picc=2\xFF\xFF\xFF")
     elseif state == 1
         pinh(led_pin)
+        nxt.fstr0(@"q1.picc=1\xFF\xFF\xFF")
     else
-        pint(led_pin)
+        pstate := !pstate
+        if pstate
+            pinh(led_pin)
+        else
+            pinl(led_pin)

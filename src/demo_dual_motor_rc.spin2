@@ -13,7 +13,7 @@
 
 CON { timing }
 
-    CLK_FREQ = 270_000_000                                      ' system freq as a constant
+    CLK_FREQ = 200_000_000                                      ' system freq as a constant
     _clkfreq = CLK_FREQ                                         ' set system clock
 
 CON { fixed io pins }
@@ -26,9 +26,13 @@ CON { fixed io pins }
     SF_SDO = 59  { O }
     SF_SDI = 58  { I }
 
-    SBUS_RX = 58 { I }
-    RSL_P = 56
-    ALARM = 57
+    SBUS_RX = 49 { I }
+    RSL_P = 48
+
+    NXT_RX = 44
+    NXT_TX = 45
+
+    VM_IN = 51
 
 
 
@@ -39,6 +43,7 @@ OBJ { our Drive Subsystem }
     remoteCtl : "isp_flysky_rx"                     ' the FlySky Transmitter
 
     rsl : "testdrive_rsl"
+    batt        :   "jm_ez_analog"
 
 VAR
 
@@ -49,8 +54,8 @@ PUB main() | statusOK, basePinLt, basePinRt, voltage, motor, detectModeLt, detec
 '' DEMO Driving a two wheeled platform
 
     debug("* demo dual motor control via R/C")
-    pinl(ALARM)
-    rsl.start(RSL_P, 500)
+    rsl.start(RSL_P, NXT_RX, NXT_TX, 400)
+    batt.start(VM_IN, 0, 3645)
 
     ' validate user settings/choicess
     '  do NOT start motor unless all are legit!
@@ -69,7 +74,6 @@ PUB main() | statusOK, basePinLt, basePinRt, voltage, motor, detectModeLt, detec
 
         ' override defaults, use 100 %
         wheels.setMaxSpeed(100)
-        wheels.setMaxSpeedForDistance(100)
         ' just don't draw current at stop
         wheels.holdAtStop(false)
 
@@ -116,7 +120,7 @@ VAR
     long bLastShowDriveStates
     long nAccelerationRate
 
-PUB remoteControlMotor() | bIgnoreJoySticks, bBrakeMode, bAlarm, bEmerCutoff, bShowDriveStates, accrate, rngMin, rngMax
+PUB remoteControlMotor() | bIgnoreJoySticks, bBrakeMode, bAlarm, bEmerCutoff, bShowDriveStates, accrate, rngMin, rngMax, long mLeftAmps, long mLeftWatts, long mRightAmps, long mRightWatts, mSpeedLeft, mSpeedRight
 '' Listen to FlySky and control motor, get status based on Switch/Joystick inputs
     waitms(500)    ' wait for 1/2 sec for backend to catch up
 
@@ -146,6 +150,14 @@ PUB remoteControlMotor() | bIgnoreJoySticks, bBrakeMode, bAlarm, bEmerCutoff, bS
         bEmerCutoff := remoteCtl.swIsOff(remoteCtl.CTL_SW_D)
         rngMin, rngMax := remoteCtl.chanMinMax(remoteCtl.CTL_VRA)
         accrate := map(remoteCtl.readchannel(remoteCtl.CTL_VRA), rngMin, rngMax, 5, 150)
+
+        mLeftAmps, mLeftWatts, mRightAmps, mRightWatts := wheels.getCurrent()
+        debug(udec(mLeftAmps), udec(mLeftWatts), udec(mRightAmps), udec(mRightWatts))
+
+        if wheels.isTurning()
+            rsl.set_rate(160)
+        else
+            rsl.set_rate(400)
 
         if bLastShowDriveStates <> bShowDriveStates
             debug("- sho ", sdec_long_(bShowDriveStates))
@@ -194,15 +206,17 @@ PUB remoteControlMotor() | bIgnoreJoySticks, bBrakeMode, bAlarm, bEmerCutoff, bS
                 priorDirection := rcDirection
                 priorSpeed := rcSpeed
 
-        if bAlarm
-            pinh(ALARM)
-        else
-            pinl(ALARM)
-
         if not bEmerCutoff and not bIgnoreJoysticks
             rsl.set_state(2)
         else
             rsl.set_state(1)
+
+        mSpeedLeft, mSpeedRight := wheels.getPower()
+        rsl.wrspeedleft(mSpeedLeft)
+        rsl.wrspeedright(mSpeedRight)
+        rsl.wrwattleft(mLeftWatts)
+        rsl.wrwattright(mRightWatts)
+        rsl.wrvolts(batt.read())
 
         wheels.holdAtStop(bBrakeMode)
 
@@ -216,12 +230,12 @@ PRI updPosnBothJoy() : speed, direction | rawSpeed, rawDirection, rngMin, rngMax
     'debug("-- JOY -- JOY --")
     rawSpeed := remoteCtl.readChannel(remoteCtl.CTL_RT_JOY_VT)
     rngMin, rngMax := remoteCtl.chanMinMax(remoteCtl.CTL_RT_JOY_VT)
-    speed := map(rawSpeed, rngMin, rngMax, -100, 100)
+    speed := map(rawSpeed, rngMin, rngMax, 100, -100)
 
     ' route Lt Joystick Hz (spring center) to direction
     rawDirection := remoteCtl.readChannel(remoteCtl.CTL_LT_JOY_HZ)
     rngMin, rngMax := remoteCtl.chanMinMax(remoteCtl.CTL_LT_JOY_HZ)
-    direction := map(rawDirection, rngMin, rngMax, -100, 100)
+    direction := map(rawDirection, rngMin, rngMax, 100, -100)
 
 PRI map(inValue, inMin, inMax, outMin, outMax) : outValue
 {
